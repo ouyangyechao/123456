@@ -1,0 +1,4226 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>汽车AI智能诊断系统</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+        }
+        
+        :root {
+            --primary: #1a3a5f;
+            --secondary: #6c757d;
+            --light: #ffffff;
+            --dark: #1a3a5f;
+            --success: #28a745;
+            --danger: #dc3545;
+            --border: #e5e7eb;
+            --shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            --radius: 12px;
+            --accent: #3a86ff;
+            --accent-light: #5fa0ff;
+            --gradient-bg: #f9fafb;
+            --ai-bubble: #f3f4f6;
+            --user-bubble: #3a86ff;
+        }
+        
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
+        
+        body {
+            background: var(--gradient-bg);
+            color: var(--dark);
+            line-height: 1.6;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 开场动画 */
+        #intro-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #ffffff 0%, #f3f4f6 50%, #1a3a5f 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            animation: fadeIn 1.5s ease-in-out forwards;
+        }
+        
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        
+        .logo {
+            font-size: 3.8rem;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: var(--dark);
+            text-align: center;
+            animation: scaleIn 1.2s ease-in-out forwards;
+            animation-delay: 0.5s;
+            opacity: 0;
+        }
+        
+        @keyframes scaleIn { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        
+        .logo span { color: var(--primary); }
+        
+        .subtitle {
+            font-size: 1.4rem;
+            color: var(--secondary);
+            margin-bottom: 40px;
+            text-align: center;
+            animation: fadeInUp 1s ease-in-out forwards;
+            animation-delay: 1s;
+            opacity: 0;
+        }
+        
+        @keyframes fadeInUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        
+        .loading-bar {
+            width: 300px;
+            height: 6px;
+            background: rgba(0, 0, 0, 0.05);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            animation: fadeInUp 1s ease-in-out forwards;
+            animation-delay: 1.5s;
+            opacity: 0;
+        }
+        
+        .loading-progress {
+            height: 100%;
+            width: 0%;
+            background: var(--primary);
+            border-radius: 3px;
+            animation: loading 2s ease-in-out forwards;
+            animation-delay: 2s;
+        }
+        
+        @keyframes loading { 0% { width: 0%; } 100% { width: 100%; } }
+        
+        .loading-text {
+            font-size: 1rem;
+            color: var(--secondary);
+            animation: fadeInUp 1s ease-in-out forwards;
+            animation-delay: 2.5s;
+            opacity: 0;
+        }
+
+        /* 页面容器 */
+        .page {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        
+        .page.active {
+            display: flex;
+            flex-direction: column;
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* 通用页面样式 */
+        .page-content {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .page-header {
+            padding: 16px 24px;
+            background: var(--light);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+        
+        .page-title {
+            font-size: 1.5rem;
+            color: var(--dark);
+            font-weight: 600;
+        }
+        
+        .page-subtitle {
+            color: var(--secondary);
+            font-size: 0.875rem;
+        }
+        
+        .back-btn {
+            background: rgba(0, 0, 0, 0.03);
+            border: none;
+            color: var(--dark);
+            font-size: 0.95rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: var(--radius);
+            transition: all 0.3s;
+        }
+        
+        .back-btn:hover {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        /* 登录注册页面 */
+        .auth-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+        
+        .auth-form {
+            width: 100%;
+            max-width: 420px;
+            background: var(--light);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            padding: 32px;
+            box-shadow: var(--shadow);
+        }
+        
+        .auth-title {
+            font-size: 1.8rem;
+            color: var(--dark);
+            margin-bottom: 8px;
+            text-align: center;
+            font-weight: 600;
+        }
+        
+        .auth-subtitle {
+            color: var(--secondary);
+            text-align: center;
+            margin-bottom: 24px;
+            font-size: 1rem;
+        }
+        
+        .auth-tabs {
+            display: flex;
+            margin-bottom: 24px;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .auth-tab {
+            flex: 1;
+            text-align: center;
+            padding: 12px;
+            cursor: pointer;
+            color: var(--secondary);
+            transition: all 0.3s;
+            border-bottom: 2px solid transparent;
+            font-size: 1rem;
+        }
+        
+        .auth-tab.active {
+            color: var(--dark);
+            border-bottom: 2px solid var(--accent);
+        }
+        
+        .auth-form-content { display: none; }
+        .auth-form-content.active { display: block; }
+        
+        .form-group { margin-bottom: 20px; }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--dark);
+            font-weight: 500;
+            font-size: 1rem;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 12px 16px;
+            background: var(--light);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s;
+            color: var(--dark);
+        }
+        
+        .form-input::placeholder { color: var(--secondary); }
+        
+        .form-input:focus {
+            border-color: var(--accent);
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(58, 134, 255, 0.1);
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+            font-weight: 500;
+        }
+        
+        .btn:hover {
+            background: var(--accent-light);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(58, 134, 255, 0.15);
+        }
+        
+        .btn-block { width: 100%; }
+
+        /* 导航栏 */
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 24px;
+            background: var(--light);
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+        
+        .nav-links { display: flex; gap: 24px; }
+        
+        .nav-link {
+            color: var(--secondary);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+            cursor: pointer;
+        }
+        
+        .nav-link:hover, .nav-link.active { color: var(--accent); }
+
+        /* 品牌选择页面 */
+        .brands-container {
+            flex: 1;
+            padding: 24px;
+            overflow-y: auto;
+        }
+        
+        .search-box {
+            max-width: 500px;
+            margin: 0 auto 24px;
+            position: relative;
+        }
+        
+        .search-input {
+            width: 100%;
+            padding: 14px 20px;
+            background: var(--light);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            font-size: 1rem;
+            padding-left: 48px;
+            color: var(--dark);
+        }
+        
+        .search-icon {
+            position: absolute;
+            left: 18px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--secondary);
+            font-size: 1.1rem;
+        }
+        
+        .category-tabs {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        
+        .category-tab {
+            padding: 8px 18px;
+            background: var(--light);
+            border-radius: 20px;
+            cursor: pointer;
+            color: var(--secondary);
+            font-weight: 500;
+            font-size: 0.95rem;
+            border: 1px solid var(--border);
+            transition: all 0.3s;
+        }
+        
+        .category-tab.active {
+            background: rgba(58, 134, 255, 0.05);
+            color: var(--accent);
+            border-color: rgba(58, 134, 255, 0.2);
+        }
+        
+        .brands-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 20px;
+        }
+        
+        .brand-card {
+            background: var(--light);
+            border-radius: var(--radius);
+            padding: 20px 12px;
+            text-align: center;
+            border: 1px solid var(--border);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .brand-card:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow);
+            border-color: rgba(58, 134, 255, 0.2);
+        }
+        
+        .brand-logo {
+            width: 70px;
+            height: 70px;
+            object-fit: contain;
+            margin: 0 auto 12px;
+            border-radius: 6px;
+            background: var(--light);
+            padding: 8px;
+        }
+        
+        .brand-name {
+            font-weight: 500;
+            color: var(--dark);
+            font-size: 1rem;
+        }
+
+        /* 车辆信息录入页面 */
+        .vehicle-form-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+        
+        .vehicle-form {
+            width: 100%;
+            max-width: 640px;
+            background: var(--light);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            padding: 40px;
+            box-shadow: var(--shadow);
+        }
+        
+        .form-title {
+            font-size: 1.5rem;
+            color: var(--dark);
+            margin-bottom: 8px;
+            text-align: center;
+            font-weight: 600;
+        }
+        
+        .form-subtitle {
+            color: var(--secondary);
+            text-align: center;
+            margin-bottom: 24px;
+            font-size: 0.95rem;
+        }
+        
+        .selected-brand {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 24px;
+            padding: 12px;
+            background: var(--light);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+        }
+        
+        .selected-brand-logo {
+            width: 40px;
+            height: 40px;
+            object-fit: contain;
+            background: var(--light);
+            padding: 4px;
+            border-radius: 6px;
+        }
+        
+        .selected-brand-name {
+            font-size: 1.1rem;
+            font-weight: 500;
+            color: var(--dark);
+        }
+        
+        .input-with-icon { position: relative; }
+        
+        .voice-input-btn {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--secondary);
+            cursor: pointer;
+            font-size: 1.1rem;
+            transition: color 0.3s;
+        }
+        /* 语音识别“结束”按钮：小号文字按钮，贴合整体简洁UI */
+        .voice-end-wrapper {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 4px;
+        }
+
+        .voice-end-btn {
+            position: relative;
+            padding: 2px 10px;
+            font-size: 0.72rem;
+            border-radius: 999px;
+            border: 1px solid rgba(148, 163, 184, 0.7);
+            background: rgba(248, 250, 252, 0.85);
+            color: #4b5563;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            transition: all 0.18s ease;
+            display: none; /* 默认不显示，只有在语音识别时才出现 */
+        }
+
+        .voice-end-btn.visible {
+            display: inline-flex;
+        }
+
+        .voice-end-btn:hover {
+            background: rgba(226, 232, 240, 0.95);
+            transform: translateY(-0.5px);
+            box-shadow: 0 6px 16px rgba(15, 23, 42, 0.12);
+        }
+
+        /* 对话页面底部的结束按钮，保持一体式布局 */
+        .voice-end-chat {
+            margin-left: 8px;
+        }
+
+        
+        .voice-input-btn:hover { color: var(--accent); }
+        
+        .form-row { display: flex; gap: 16px; }
+        .form-row .form-group { flex: 1; }
+
+        /* 问题描述页面 */
+        .problem-form-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+        
+        .problem-form {
+            width: 100%;
+            max-width: 760px;
+            background: var(--light);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            padding: 40px;
+            box-shadow: var(--shadow);
+        }
+
+        /* 问题描述页面：放大语音识别按钮，居中显示，避免被遮挡 */
+        .problem-form .input-with-icon {
+            position: static;
+            display: flex;
+            justify-content: center;
+            margin: 24px 0 12px;
+        }
+
+        #problem-voice-btn {
+            position: relative;
+            right: auto;
+            top: auto;
+            transform: none;
+            width: 72px;
+            height: 72px;
+            border-radius: 999px;
+            background: linear-gradient(145deg, var(--accent), #4f46e5);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.6rem;
+            box-shadow: 0 18px 40px rgba(79, 70, 229, 0.4);
+        }
+
+        #problem-voice-btn i {
+            pointer-events: none;
+        }
+
+        #problem-voice-btn.listening {
+            transform: translateY(-2px) scale(1.03);
+            box-shadow: 0 22px 55px rgba(79, 70, 229, 0.5);
+        }
+
+        .problem-input {
+            width: 100%;
+            min-height: 120px;
+            padding: 16px;
+            background: var(--light);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            font-size: 1rem;
+            resize: vertical;
+            margin-bottom: 20px;
+            color: var(--dark);
+        }
+        
+        .problem-input::placeholder { color: var(--secondary); }
+        
+        .problem-input:focus {
+            border-color: var(--accent);
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(58, 134, 255, 0.1);
+        }
+        
+        .suggested-problems {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+        
+        .suggested-problem {
+            padding: 8px 16px;
+            background: var(--light);
+            border-radius: 20px;
+            cursor: pointer;
+            color: var(--secondary);
+            font-size: 0.9rem;
+            border: 1px solid var(--border);
+            transition: all 0.3s;
+        }
+        
+        .suggested-problem:hover {
+            background: rgba(58, 134, 255, 0.05);
+            color: var(--accent);
+            border-color: rgba(58, 134, 255, 0.2);
+        }
+
+        /* 核心：聊天诊断页面（ChatGPT风格） */
+        .chat-diagnosis-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            background: var(--light);
+            overflow: hidden;
+        }
+        
+        .diagnosis-header {
+            padding: 16px 24px;
+            background: var(--light);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+        
+        .diagnosis-title {
+            font-size: 1.2rem;
+            color: var(--dark);
+            font-weight: 600;
+        }
+        
+        .diagnosis-subtitle {
+            color: var(--secondary);
+            font-size: 0.875rem;
+            margin-top: 2px;
+        }
+        
+        .diagnosis-actions { display: flex; gap: 12px; }
+        
+        /* 对话内容区（含动态头像） */
+        .diagnosis-content {
+            flex: 1;
+            padding: 24px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            justify-content: flex-start;
+            align-items: center;
+        }
+        
+        /* 动态头像容器 */
+        .avatar-container {
+            margin: 20px 0;
+            position: relative;
+        }
+        
+        .chat-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: url('/mnt/data/微信图片_20251114173800_61_1.jpg') no-repeat center/cover;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 2.5rem;
+            position: relative;
+            z-index: 2;
+        }
+        
+        /* 头像波动层（3层实现渐变波动） */
+        .avatar-wave {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: rgba(58, 134, 255, 0.3);
+            z-index: 1;
+            opacity: 0;
+            animation: wave 2s infinite ease-in-out;
+        }
+        
+        .avatar-wave:nth-child(2) { animation-delay: 0.3s; }
+        .avatar-wave:nth-child(3) { animation-delay: 0.6s; }
+        
+        /* 说话时激活波动 */
+        .chat-avatar.speaking .avatar-wave { opacity: 1; }
+        
+        @keyframes wave {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(58, 134, 255, 0.4); }
+            70% { transform: scale(1.8); box-shadow: 0 0 0 15px rgba(58, 134, 255, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(58, 134, 255, 0); }
+        }
+        
+        /* 诊断问题（居中显示） */
+        .diagnosis-question {
+            text-align: center;
+            font-size: 1.5rem;
+            color: var(--dark);
+            font-weight: 500;
+            padding: 16px 24px;
+            max-width: 80%;
+            line-height: 1.6;
+        }
+        
+        /* 消息气泡 */
+        .message {
+            max-width: 75%;
+            padding: 12px 16px;
+            border-radius: 10px;
+            line-height: 1.5;
+            font-size: 1rem;
+            word-wrap: break-word;
+        }
+        
+        .message-ai {
+            align-self: flex-start;
+            background: var(--ai-bubble);
+            color: var(--dark);
+            border-top-left-radius: 4px;
+        }
+        
+        .message-user {
+            align-self: flex-end;
+            background: var(--user-bubble);
+            color: white;
+            border-top-right-radius: 4px;
+        }
+        
+        /* 输入区域 */
+        .diagnosis-input-container {
+            width: 100%;
+            padding: 16px 24px;
+            background: var(--light);
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-shrink: 0;
+        }
+        
+        .diagnosis-input {
+            flex: 1;
+            padding: 12px 18px;
+            background: var(--light);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            font-size: 1rem;
+            color: var(--dark);
+        }
+        
+        .diagnosis-input::placeholder { color: var(--secondary); }
+        
+        .diagnosis-input:focus {
+            border-color: var(--accent);
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(58, 134, 255, 0.1);
+        }
+        
+        .diagnosis-action-btn {
+            background: none;
+            border: none;
+            color: var(--secondary);
+            cursor: pointer;
+            font-size: 1.1rem;
+            transition: color 0.3s;
+            padding: 8px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .diagnosis-action-btn:hover {
+            color: var(--accent);
+            background: rgba(58, 134, 255, 0.05);
+        }
+        
+        .diagnosis-send-btn {
+            background: var(--accent);
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 1.1rem;
+            padding: 10px;
+            border-radius: 50%;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .diagnosis-send-btn:hover {
+            background: var(--accent-light);
+            transform: scale(1.05);
+        }
+
+        /* 语音输入指示器 */
+        .voice-indicator {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--light);
+            color: var(--dark);
+            padding: 16px 24px;
+            border-radius: var(--radius);
+            z-index: 3000;
+            text-align: center;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+        }
+        
+        
+
+        /* 语音指示器右上角关闭按钮 */
+        .voice-indicator-close {
+            position: absolute;
+            top: 8px;
+            right: 10px;
+            border: none;
+            background: transparent;
+            font-size: 1.1rem;
+            line-height: 1;
+            cursor: pointer;
+            color: #6b7280;
+            padding: 4px;
+        }
+
+        .voice-indicator-close:hover {
+            color: var(--danger);
+        }
+.voice-indicator.active { display: block; }
+        
+        .voice-pulse {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: rgba(58, 134, 255, 0.05);
+            margin: 0 auto 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(58, 134, 255, 0.3); }
+            70% { transform: scale(1); box-shadow: 0 0 0 12px rgba(58, 134, 255, 0); }
+            100% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(58, 134, 255, 0); }
+        }
+
+        /* 打字机效果 */
+        .typewriter {
+            overflow: hidden;
+            border-right: 2px solid var(--accent);
+            white-space: nowrap;
+            margin: 0;
+            animation: typing 3s steps(40, end), blink-caret 0.75s step-end infinite;
+        }
+        
+        @keyframes typing { from { width: 0; } to { width: 100%; } }
+        @keyframes blink-caret { from, to { border-color: transparent; } 50% { border-color: var(--accent); } }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .brands-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+            .page-header { padding: 12px 16px; }
+            .page-title { font-size: 1.3rem; }
+            .form-row { flex-direction: column; gap: 0; }
+            .diagnosis-question { font-size: 1.2rem; max-width: 90%; padding: 12px; }
+            .message { max-width: 85%; font-size: 0.95rem; padding: 10px 14px; }
+            .chat-avatar { width: 60px; height: 60px; font-size: 2rem; }
+        }
+
+        /* 个人中心页面 */
+        .profile-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+        
+        .profile-form {
+            width: 100%;
+            max-width: 550px;
+            background: var(--light);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            padding: 32px;
+            box-shadow: var(--shadow);
+        }
+        
+        .profile-avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.03);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--dark);
+            font-size: 2.5rem;
+            margin: 0 auto 24px;
+            border: 1px solid var(--border);
+        }
+        
+        .profile-nav-container {
+            display: flex;
+            gap: 12px;
+            margin-top: 16px;
+            margin-bottom: 24px;
+        }
+        
+        .profile-nav-btn {
+            flex: 1;
+            padding: 12px;
+            background: var(--light);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+            color: var(--dark);
+        }
+        
+        .profile-nav-btn.active {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+        
+        .profile-content { display: none; }
+        .profile-content.active { display: block; }
+        
+        .profile-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin: 24px 0;
+        }
+        
+        .stat-card {
+            background: var(--light);
+            border-radius: var(--radius);
+            padding: 16px;
+            text-align: center;
+            border: 1px solid var(--border);
+        }
+        
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: var(--dark);
+        }
+        
+        .stat-label {
+            color: var(--secondary);
+            font-size: 0.875rem;
+        }
+        
+        .history-list {
+            max-height: 350px;
+            overflow-y: auto;
+            margin-top: 16px;
+        }
+        
+        .history-item {
+            padding: 16px;
+            background: var(--light);
+            border-radius: var(--radius);
+            margin-bottom: 12px;
+            border: 1px solid var(--border);
+        }
+        
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        
+        .history-date { font-weight: 500; color: var(--dark); }
+        .history-brand { color: var(--secondary); font-size: 0.875rem; }
+        .history-problem { color: var(--dark); margin-bottom: 8px; }
+        .history-solution { color: var(--secondary); font-size: 0.875rem; }
+        
+        .history-status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 16px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        
+        .status-solved {
+            background: rgba(40, 167, 69, 0.05);
+            color: var(--success);
+            border: 1px solid rgba(40, 167, 69, 0.2);
+        }
+        
+        .status-pending {
+            background: rgba(255, 193, 7, 0.05);
+            color: var(--warning);
+            border: 1px solid rgba(255, 193, 7, 0.2);
+        }
+        
+        .settings-option {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .settings-option:last-child { border-bottom: none; }
+        
+        .settings-label { font-weight: 500; color: var(--dark); }
+        .settings-description { font-size: 0.875rem; color: var(--secondary); margin-top: 4px; }
+        
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 48px;
+            height: 24px;
+        }
+        
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--border);
+            transition: .4s;
+            border-radius: 34px;
+        }
+        
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .toggle-slider { background-color: var(--accent); }
+        input:checked + .toggle-slider:before { transform: translateX(24px); }
+
+        /* API状态指示器 */
+        .api-status {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            z-index: 1000;
+            background: var(--light);
+            border: 1px solid var(--border);
+        }
+        
+        .api-status.connected {
+            background: rgba(40, 167, 69, 0.05);
+            color: var(--success);
+            border: 1px solid rgba(40, 167, 69, 0.2);
+        }
+        
+        .api-status.disconnected {
+            background: rgba(220, 53, 69, 0.05);
+            color: var(--danger);
+            border: 1px solid rgba(220, 53, 69, 0.2);
+        }
+        
+        .api-status.connecting {
+            background: rgba(255, 193, 7, 0.05);
+            color: var(--warning);
+            border: 1px solid rgba(255, 193, 7, 0.2);
+        }
+
+        /* 登录错误提示 */
+        .error-message {
+            color: var(--danger);
+            font-size: 0.875rem;
+            margin-top: 8px;
+            text-align: center;
+            display: none;
+        }
+        
+        .error-message.show {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+    
+        /* 覆盖品牌选择页面尺寸，让图标铺满页面 */
+        #page-brand .page-content {
+            height: 100vh;
+        }
+        .brands-container {
+            flex: 1;
+            padding: 16px 24px 24px;
+            display: flex;
+            flex-direction: column;
+        }
+        .brands-grid {
+            flex: 1;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            grid-auto-rows: 170px;
+            gap: 24px;
+            align-content: stretch;
+        }
+        .brand-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .brand-logo {
+            width: 96px;
+            height: 96px;
+        }
+
+    
+
+
+/* === Enhanced ChatGPT Voice UI === */
+#page-chat {
+    background: radial-gradient(circle at center, #eef4ff, #dbe7ff, #cbd9ff);
+    backdrop-filter: blur(20px);
+}
+
+.chat-diagnosis-container, .diagnosis-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center !important;
+    justify-content: flex-start;
+    width: 100%;
+    padding-top: 40px;
+}
+
+/* Avatar */
+.chat-avatar {
+    width: 140px !important;
+    height: 140px !important;
+    border-radius: 50%;
+    background: url('/mnt/data/微信图片_20251114173800_61_1.jpg') no-repeat center/cover;
+    box-shadow: 0 25px 60px rgba(0,0,0,0.28);
+    margin-bottom: 10px;
+    position: relative;
+}
+
+/* AI Speaking waveform bars */
+.waveform-bars {
+    display: flex;
+    gap: 6px;
+    margin-top: 18px;
+}
+.wave-bar {
+    width: 6px;
+    height: 18px;
+    background: #3b82f6;
+    border-radius: 6px;
+    animation: waveAnim 1s infinite ease-in-out;
+}
+@keyframes waveAnim {
+    0% { transform: scaleY(0.6); }
+    50% { transform: scaleY(1.6); }
+    100% { transform: scaleY(0.6); }
+}
+.chat-avatar.speaking + .waveform-bars .wave-bar {
+    animation-duration: 0.45s !important;
+}
+
+/* Large soft text */
+.diagnosis-question, .message-ai {
+    font-size: 1.65rem !important;
+    font-weight: 500;
+    color: #111;
+    text-align: center !important;
+    line-height: 2.1;
+    max-width: 900px;
+    padding: 0 20px;
+}
+
+/* Fade-in messages */
+.message-ai {
+    animation: fadeIn 0.6s ease;
+}
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px);}
+    to { opacity:1; transform: translateY(0);}
+}
+
+
+/* Add dynamic background animation */
+#page-chat {
+    background: radial-gradient(circle at top, #0b1120, #020617 60%, #000000);
+    animation: backgroundFlow 30s infinite linear;
+}
+
+@keyframes backgroundFlow {
+    0% { background: radial-gradient(circle at top, #0b1120, #020617 60%, #000000); }
+    50% { background: radial-gradient(circle at top, #020617, #1a3a5f 60%, #000000); }
+    100% { background: radial-gradient(circle at top, #0b1120, #020617 60%, #000000); }
+}
+
+/* Add fluid avatar effect */
+.chat-avatar {
+    width: 130px;
+    height: 130px;
+    border-radius: 50%;
+    background: url('/mnt/data/微信图片_20251114173800_61_1.jpg') no-repeat center/cover;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 32px 80px rgba(15, 23, 42, 0.95);
+    animation: avatarFluid 6s ease-in-out infinite;
+}
+
+@keyframes avatarFluid {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.07); }
+    100% { transform: scale(1); }
+}
+
+/* Thinking animation - dots effect */
+.thinking-indicator {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 18px;
+    animation: fadeIn 1.2s ease-in-out forwards;
+}
+
+.thinking-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #38bdf8;
+    opacity: 0.3;
+    animation: dotBlink 1.4s infinite ease-in-out;
+}
+
+.thinking-dot:nth-child(2) { animation-delay: 0.2s; }
+.thinking-dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes dotBlink {
+    0% { opacity: 0.3; transform: translateY(0); }
+    50% { opacity: 0.9; transform: translateY(-4px); }
+    100% { opacity: 0.3; transform: translateY(0); }
+}
+
+/* Waveform animation */
+.waveform-bars {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 18px;
+}
+
+.wave-bar {
+    width: 6px;
+    height: 18px;
+    background: #3b82f6;
+    border-radius: 6px;
+    animation: waveAnim 1s infinite ease-in-out;
+}
+
+@keyframes waveAnim {
+    0% { transform: scaleY(0.6); }
+    50% { transform: scaleY(1.6); }
+    100% { transform: scaleY(0.6); }
+}
+
+.chat-avatar.speaking + .waveform-bars .wave-bar {
+    animation-duration: 0.45s !important;
+}
+
+
+/* Remove typewriter flashing caret */
+.typewriter::after {
+    display: none !important;
+}
+
+/* Adjust AI text for clarity and beauty */
+.diagnosis-question, .message-ai {
+    font-size: 1.55rem !important;
+    line-height: 1.8 !important;
+    font-weight: 500;
+    color: #f9fafb;
+    text-align: center !important;
+    margin-top: 10px;
+    max-width: 850px;
+    word-wrap: break-word;
+    letter-spacing: 0.04em;
+    padding: 10px;
+    background: rgba(15, 23, 42, 0.85);
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+/* Ensure smooth transitions when AI messages appear */
+.message-ai {
+    animation: fadeIn 0.8s ease;
+}
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+
+/* Remove typewriter flashing caret */
+.typewriter::after {
+    display: none !important;
+}
+
+/* Adjust AI text to appear one by one, with smooth fade-in */
+.diagnosis-question, .message-ai {
+    font-size: 1.55rem !important;
+    line-height: 1.8 !important;
+    font-weight: 500;
+    color: #f9fafb;
+    text-align: center !important;
+    margin-top: 10px;
+    max-width: 850px;
+    word-wrap: break-word;
+    letter-spacing: 0.04em;
+    padding: 10px;
+    background: rgba(15, 23, 42, 0.85);
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    opacity: 0;
+    animation: fadeInText 2s ease forwards;
+}
+
+/* Smooth fade-in effect for text */
+@keyframes fadeInText {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+
+/* Remove typewriter flashing caret */
+.typewriter::after {
+    display: none !important;
+}
+
+/* Modify AI text for smooth fading effect */
+.diagnosis-question, .message-ai {
+    font-size: 1.55rem !important;
+    line-height: 1.8 !important;
+    font-weight: 500;
+    color: #f9fafb;
+    text-align: center !important;
+    margin-top: 10px;
+    max-width: 850px;
+    word-wrap: break-word;
+    letter-spacing: 0.04em;
+    padding: 10px;
+    background: rgba(15, 23, 42, 0.85);
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    opacity: 0;
+    animation: fadeInText 2s ease forwards;
+}
+
+/* Smooth fade-in effect for text */
+@keyframes fadeInText {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Dynamic Avatar animation for fluid effect */
+.chat-avatar {
+    width: 130px;
+    height: 130px;
+    border-radius: 50%;
+    background: url('/mnt/data/微信图片_20251114173800_61_1.jpg') no-repeat center/cover;
+    background-size: cover;
+    margin-bottom: 20px;
+    animation: avatarPulse 2s infinite ease-in-out;
+}
+
+@keyframes avatarPulse {
+    0% { transform: scale(1); box-shadow: 0 0 10px rgba(56, 189, 248, 0.6); }
+    50% { transform: scale(1.1); box-shadow: 0 0 20px rgba(56, 189, 248, 0.8); }
+    100% { transform: scale(1); box-shadow: 0 0 10px rgba(56, 189, 248, 0.6); }
+}
+
+/* Adjusting wave bars based on voice frequency */
+.waveform-bars {
+    display: flex;
+    gap: 6px;
+    margin-top: 18px;
+}
+
+.wave-bar {
+    width: 6px;
+    height: 18px;
+    background: #3b82f6;
+    border-radius: 6px;
+    animation: waveAnim 1s infinite ease-in-out;
+}
+
+@keyframes waveAnim {
+    0% { transform: scaleY(0.6); }
+    50% { transform: scaleY(1.6); }
+    100% { transform: scaleY(0.6); }
+}
+
+.chat-avatar.speaking + .waveform-bars .wave-bar {
+    animation-duration: 0.45s !important;
+}
+
+
+/* Modify Avatar image and animations */
+.chat-avatar {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: url('/mnt/data/微信图片_20251114173800_61_1.jpg') no-repeat center/cover;
+    background-size: cover;
+    margin-bottom: 20px;
+    animation: avatarPulse 2s infinite ease-in-out;
+}
+
+@keyframes avatarPulse {
+    0% { transform: scale(1); box-shadow: 0 0 10px rgba(56, 189, 248, 0.6); }
+    50% { transform: scale(1.1); box-shadow: 0 0 20px rgba(56, 189, 248, 0.8); }
+    100% { transform: scale(1); box-shadow: 0 0 10px rgba(56, 189, 248, 0.6); }
+}
+
+/* Adjust the waveform based on real sound frequency */
+.waveform-bars {
+    display: flex;
+    gap: 6px;
+    margin-top: 18px;
+}
+
+.wave-bar {
+    width: 6px;
+    height: 18px;
+    background: #3b82f6;
+    border-radius: 6px;
+    animation: waveAnim 1s infinite ease-in-out;
+}
+
+@keyframes waveAnim {
+    0% { transform: scaleY(0.6); }
+    50% { transform: scaleY(1.6); }
+    100% { transform: scaleY(0.6); }
+}
+
+.chat-avatar.speaking + .waveform-bars .wave-bar {
+    animation-duration: 0.45s !important;
+}
+
+/* Remove typewriter effect and make AI text appear smoothly */
+.typewriter::after {
+    display: none !important;
+}
+
+.diagnosis-question, .message-ai {
+    font-size: 1.55rem !important;
+    line-height: 1.8 !important;
+    font-weight: 500;
+    color: #f9fafb;
+    text-align: center !important;
+    margin-top: 10px;
+    max-width: 850px;
+    word-wrap: break-word;
+    letter-spacing: 0.04em;
+    padding: 10px;
+    background: rgba(15, 23, 42, 0.85);
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+/* Smooth fade-in effect for text */
+.message-ai {
+    animation: fadeIn 0.6s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+
+/* Update Avatar image and animations */
+.chat-avatar {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: url('/mnt/data/微信图片_20251114173800_61_1.jpg') no-repeat center/cover;
+    background-size: cover;
+    margin-bottom: 20px;
+    animation: avatarPulse 2s infinite ease-in-out;
+}
+
+/* Avatar Pulse when AI is speaking */
+@keyframes avatarPulse {
+    0% { transform: scale(1); box-shadow: 0 0 10px rgba(56, 189, 248, 0.6); }
+    50% { transform: scale(1.1); box-shadow: 0 0 20px rgba(56, 189, 248, 0.8); }
+    100% { transform: scale(1); box-shadow: 0 0 10px rgba(56, 189, 248, 0.6); }
+}
+
+/* Adjust the waveform bars to react based on voice input */
+.waveform-bars {
+    display: flex;
+    gap: 6px;
+    margin-top: 18px;
+}
+
+.wave-bar {
+    width: 6px;
+    height: 18px;
+    background: #3b82f6;
+    border-radius: 6px;
+    animation: waveAnim 1s infinite ease-in-out;
+}
+
+/* Dynamic effect when the AI speaks */
+@keyframes waveAnim {
+    0% { transform: scaleY(0.6); }
+    50% { transform: scaleY(1.6); }
+    100% { transform: scaleY(0.6); }
+}
+
+.chat-avatar.speaking + .waveform-bars .wave-bar {
+    animation-duration: 0.45s !important;
+}
+
+/* Remove typewriter effect and make AI text appear smoothly */
+.typewriter::after {
+    display: none !important;
+}
+
+.diagnosis-question, .message-ai {
+    font-size: 1.55rem !important;
+    line-height: 1.8 !important;
+    font-weight: 500;
+    color: #f9fafb;
+    text-align: center !important;
+    margin-top: 10px;
+    max-width: 850px;
+    word-wrap: break-word;
+    letter-spacing: 0.04em;
+    padding: 10px;
+    background: rgba(15, 23, 42, 0.85);
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+/* Smooth fade-in effect for text */
+.message-ai {
+    animation: fadeIn 0.6s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+
+/* Update Avatar image and animations */
+.chat-avatar {
+    width: 130px;
+    height: 130px;
+    border-radius: 50%;
+    background: url('/mnt/data/微信图片_20251114173800_61_1.jpg') no-repeat center/cover;
+    background-size: cover;
+    margin-bottom: 20px;
+    animation: avatarPulse 2s infinite ease-in-out;
+}
+
+/* Avatar Pulse when AI is speaking */
+@keyframes avatarPulse {
+    0% { transform: scale(1); box-shadow: 0 0 10px rgba(56, 189, 248, 0.6); }
+    50% { transform: scale(1.1); box-shadow: 0 0 20px rgba(56, 189, 248, 0.8); }
+    100% { transform: scale(1); box-shadow: 0 0 10px rgba(56, 189, 248, 0.6); }
+}
+
+/* Adjust the waveform bars to react based on voice input */
+.waveform-bars {
+    display: flex;
+    gap: 6px;
+    margin-top: 18px;
+}
+
+.wave-bar {
+    width: 6px;
+    height: 18px;
+    background: #3b82f6;
+    border-radius: 6px;
+    animation: waveAnim 1s infinite ease-in-out;
+}
+
+/* Dynamic effect when the AI speaks */
+@keyframes waveAnim {
+    0% { transform: scaleY(0.6); }
+    50% { transform: scaleY(1.6); }
+    100% { transform: scaleY(0.6); }
+}
+
+.chat-avatar.speaking + .waveform-bars .wave-bar {
+    animation-duration: 0.45s !important;
+}
+
+/* Remove typewriter effect and make AI text appear smoothly */
+.typewriter::after {
+    display: none !important;
+}
+
+.diagnosis-question, .message-ai {
+    font-size: 1.55rem !important;
+    line-height: 1.8 !important;
+    font-weight: 500;
+    color: #f9fafb;
+    text-align: center !important;
+    margin-top: 10px;
+    max-width: 850px;
+    word-wrap: break-word;
+    letter-spacing: 0.04em;
+    padding: 10px;
+    background: rgba(15, 23, 42, 0.85);
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+/* Smooth fade-in effect for text */
+.message-ai {
+    animation: fadeIn 0.6s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+
+/* === Final Chat Voice UI Override (2025-11-14) === */
+#page-chat {
+    background: radial-gradient(circle at top, #020617 0%, #020617 45%, #020617 100%);
+}
+
+/* 让对话主卡片整体略微上移，底部留出一点空间，更适合比赛展示 */
+#page-chat .page-content {
+    background: transparent;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#page-chat .chat-diagnosis-container {
+    flex: 0 0 auto;
+    max-width: 980px;
+    width: 100%;
+    margin: 32px auto 80px;
+    padding: 16px 20px 24px;
+    background: transparent;
+}
+
+.diagnosis-header {
+    background: transparent;
+    border-bottom: none;
+}
+.diagnosis-title {
+    color: #e5e7eb;
+}
+.diagnosis-subtitle {
+    color: #9ca3af;
+}
+
+/* Avatar + waveform layout */
+.avatar-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    margin-top: 32px;
+    font-size: 0; /* hide stray text nodes like ...v */
+}
+.chat-avatar {
+    width: 140px;
+    height: 140px;
+    border-radius: 999px;
+    background: url('/mnt/data/微信图片_20251114173800_61_1.jpg') no-repeat center/cover;
+    position: relative;
+    box-shadow: 0 30px 80px rgba(15,23,42,0.95);
+    animation: avatarPulseFinal 3s ease-in-out infinite;
+}
+.chat-avatar::before {
+    content: "";
+    position: absolute;
+    inset: -6px;
+    border-radius: inherit;
+    background: conic-gradient(from 0deg, #38bdf8, #6366f1, #38bdf8);
+    opacity: .55;
+    filter: blur(10px);
+    z-index: -1;
+}
+/* hide robot icon,只显示你的头像 */
+.chat-avatar i {
+    display: none !important;
+}
+
+/* waveform below avatar */
+.waveform-bars {
+    order: 2;
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+}
+.chat-avatar {
+    order: 1;
+}
+.wave-bar {
+    width: 6px;
+    height: 22px;
+    border-radius: 999px;
+    background: #38bdf8;
+    animation: waveAnimFinal 1s ease-in-out infinite;
+}
+.wave-bar:nth-child(2) { animation-delay: .1s; }
+.wave-bar:nth-child(3) { animation-delay: .2s; }
+.wave-bar:nth-child(4) { animation-delay: .3s; }
+.wave-bar:nth-child(5) { animation-delay: .4s; }
+
+@keyframes waveAnimFinal {
+    0%   { transform: scaleY(0.5); opacity: 0.4; }
+    50%  { transform: scaleY(1.6); opacity: 1; }
+    100% { transform: scaleY(0.5); opacity: 0.4; }
+}
+
+@keyframes avatarPulseFinal {
+    0%   { transform: scale(1);   box-shadow: 0 30px 80px rgba(15,23,42,0.9); }
+    50%  { transform: scale(1.06); box-shadow: 0 40px 100px rgba(15,23,42,1); }
+    100% { transform: scale(1);   box-shadow: 0 30px 80px rgba(15,23,42,0.9); }
+}
+
+/* 只保留头像 + 最新一句话，不显示历史记录和用户气泡 */
+.diagnosis-content {
+    align-items: center;
+    justify-content: flex-start;
+    padding-top: 40px;
+}
+#diagnosis-content > *:not(:first-child):not(:last-child) {
+    display: none;
+}
+/* 完全隐藏用户气泡，让界面只像AI播报 */
+.message-user {
+    display: none !important;
+}
+
+/* AI文本样式——大号、居中、干净 */
+.diagnosis-question,
+.message-ai {
+    background: transparent;
+    box-shadow: none;
+    border-radius: 0;
+    font-size: 1.6rem;
+    line-height: 1.9;
+    color: #f9fafb;
+    text-align: center;
+    max-width: 780px;
+    padding: 0 16px;
+}
+
+/* 底部输入栏深色玻璃态 */
+.diagnosis-input-container {
+    background: rgba(15,23,42,0.92);
+    border-top: 1px solid #1f2937;
+}
+.diagnosis-input {
+    background: transparent;
+    border-color: #374151;
+    color: #e5e7eb;
+}
+.diagnosis-input::placeholder {
+    color: #6b7280;
+}
+.diagnosis-action-btn {
+    color: #9ca3af;
+}
+.diagnosis-action-btn:hover {
+    color: #e5e7eb;
+    background: rgba(55,65,81,0.7);
+}
+.diagnosis-send-btn {
+    background: linear-gradient(135deg,#38bdf8,#6366f1);
+}
+.diagnosis-send-btn:hover {
+    filter: brightness(1.05);
+}
+
+
+/* === UI Light & Glass Refresh Override (2025-11-14 v2) === */
+
+/* 全局背景更轻，偏白 */
+body {
+    background: radial-gradient(circle at top, #ffffff 0%, #f5f7fb 52%, #e5edff 100%) !important;
+}
+
+/* 聊天页面背景改为白色系，去掉深色 */
+#page-chat {
+    background: radial-gradient(circle at top, #ffffff 0%, #f5f7fb 45%, #eef2ff 100%) !important;
+}
+
+/* 头部与标题颜色微调，更接近 iOS 风格 */
+.diagnosis-header {
+    background: transparent !important;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.35) !important;
+}
+.diagnosis-title {
+    color: #0f172a !important;
+}
+.diagnosis-subtitle {
+    color: #6b7280 !important;
+}
+
+/* 对话区域保持居中，适配白色背景 */
+.diagnosis-content {
+    align-items: center !important;
+    justify-content: flex-start !important;
+    padding-top: 40px !important;
+}
+
+/* 头像容器与头像微调，在白色背景下更柔和 */
+.avatar-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    margin-top: 24px !important;
+    font-size: 0; /* 避免多余文本节点撑开 */
+}
+.chat-avatar {
+    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.35) !important;
+}
+
+/* 波形颜色改成更浅的蓝色，适配白底 */
+.wave-bar {
+    background: #60a5fa !important;
+}
+
+/* AI 文本颜色改为深灰，去掉暗色系对白 */
+.diagnosis-question,
+.message-ai {
+    color: #111827 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+/* 去掉“蓝色竖杠”打字机效果 */
+.typewriter {
+    border-right: none !important;
+    animation: none !important;
+}
+
+/* 底部输入栏改为白色玻璃态 */
+.diagnosis-input-container {
+    background: rgba(255, 255, 255, 0.88) !important;
+    border-top: 1px solid rgba(148, 163, 184, 0.35) !important;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+}
+.diagnosis-input {
+    background: transparent !important;
+    border-color: rgba(148, 163, 184, 0.65) !important;
+    color: #111827 !important;
+}
+.diagnosis-input::placeholder {
+    color: #9ca3af !important;
+}
+.diagnosis-action-btn {
+    color: #6b7280 !important;
+}
+.diagnosis-action-btn:hover {
+    color: #111827 !important;
+    background: rgba(148, 163, 184, 0.15) !important;
+}
+.diagnosis-send-btn {
+    background: linear-gradient(135deg, #3b82f6, #6366f1) !important;
+}
+
+/* 核心卡片加入 iOS 风格玻璃态效果：登录、表单、卡片等 */
+.auth-form,
+.vehicle-form,
+.problem-form,
+.profile-form,
+.brand-card,
+.history-item,
+.voice-indicator {
+    background: rgba(255, 255, 255, 0.86) !important;
+    border-radius: 20px !important;
+    border: 1px solid rgba(148, 163, 184, 0.25) !important;
+    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.12) !important;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+}
+
+/* 品牌选择区域本身也稍微柔和一点 */
+.brands-container {
+    background: transparent !important;
+}
+
+/* 前面界面圆角+悬停放大：品牌卡片、类别标签、Tab、按钮等 */
+.brand-card,
+.category-tab,
+.auth-tab,
+.profile-nav-btn,
+.diagnosis-action-btn,
+.diagnosis-send-btn,
+.stat-card {
+    transition: transform 0.18s ease-out, box-shadow 0.18s ease-out, background 0.18s ease-out;
+}
+.brand-card:hover,
+.category-tab:hover,
+.auth-tab:hover,
+.profile-nav-btn:hover,
+.diagnosis-action-btn:hover,
+.diagnosis-send-btn:hover,
+.stat-card:hover {
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.18);
+}
+
+/* 导航链接轻微浮动感即可 */
+.nav-link {
+    transition: color 0.18s ease-out, transform 0.18s ease-out;
+}
+.nav-link:hover {
+    transform: translateY(-1px);
+}
+
+/* 玻璃态语音提示框 */
+.voice-indicator {
+    border-radius: 24px !important;
+}
+
+/* 保证用户气泡隐藏、只展示 AI 播报，保持你要的“单轮语音对话”感 */
+.message-user {
+    display: none !important;
+}
+
+
+/* === Competition Chat Refinement (single-turn voice UI) === */
+
+/* 让头像 & 波形只在说话时波动：默认静止 */
+.avatar-container .chat-avatar {
+    animation: none !important;
+}
+.avatar-container .wave-bar {
+    animation: none !important;
+    opacity: 0.45;
+}
+.avatar-container.speaking .chat-avatar {
+    animation: avatarPulseFinal 3s ease-in-out infinite !important;
+}
+.avatar-container.speaking .wave-bar {
+    animation: waveAnimFinal 1s ease-in-out infinite !important;
+}
+
+/* AI 输出文本“慢慢浮现”效果 */
+.fade-in-text {
+    opacity: 0;
+    transform: translateY(10px);
+    animation: textFloatIn 0.7s ease-out forwards;
+}
+@keyframes textFloatIn {
+    0% {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* 聊天输入区域：只保留一个大号语音按钮 */
+.diagnosis-input-container {
+    justify-content: center !important;
+    gap: 0 !important;
+}
+.diagnosis-input {
+    display: none !important;
+}
+.diagnosis-send-btn {
+    display: none !important;
+}
+
+/* 主语音按钮样式（居中大圆形按钮） */
+#diagnosis-voice-btn {
+    width: 72px;
+    height: 72px;
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(circle at 30% 0%, #ecfeff 0%, #dbeafe 35%, #93c5fd 100%);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    box-shadow: 0 18px 45px rgba(37, 99, 235, 0.35);
+    font-size: 1.6rem;
+}
+#diagnosis-voice-btn i {
+    font-size: 1.6rem;
+}
+#diagnosis-voice-btn.listening {
+    box-shadow: 0 22px 55px rgba(37, 99, 235, 0.55);
+    transform: scale(1.05);
+}
+
+/* 提示性：保持用户气泡隐藏，只突出AI输出文本 */
+.message-user {
+    display: none !important;
+}
+
+
+/* === Global Typography & AI Text Refinement (competition v2) === */
+
+/* 全局字体栈：更接近 iOS / SF Pro 质感，中文优先苹方 / 微软雅黑 */
+body, button, input, textarea {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
+                 "PingFang SC", "Microsoft YaHei", "Segoe UI", system-ui, sans-serif !important;
+    letter-spacing: 0.02em;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* 核心对话文字：AI 输出和提示统一风格，更有层次 */
+.diagnosis-question,
+.message-ai {
+    font-weight: 600 !important;
+    letter-spacing: 0.03em;
+    line-height: 1.9 !important;
+    font-size: 1.65rem !important;
+    color: #0f172a !important;
+    text-align: center !important;
+    max-width: 820px;
+    margin: 0 auto;
+    text-rendering: optimizeLegibility;
+}
+
+/* 辅助说明小字更柔和 */
+.diagnosis-subtitle {
+    font-weight: 400;
+    letter-spacing: 0.02em;
+}
+
+/* 品牌名称等标签的字体略微紧凑一点，防止“放大后显得空” */
+.brand-name,
+.page-title,
+.auth-title {
+    letter-spacing: 0.04em;
+}
+
+/* 让按钮文字也显得更精致一点 */
+.btn,
+.nav-link,
+.category-tab,
+.auth-tab,
+.profile-nav-btn {
+    font-weight: 500;
+    letter-spacing: 0.03em;
+}
+
+
+/* === Chat Page Header & Avatar Layout Refinement (competition v3) === */
+
+/* 限制聊天诊断主容器宽度，让版心更紧凑、居中 */
+.chat-diagnosis-container {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 12px 16px 20px;
+    background: transparent !important;
+}
+
+/* 顶部标题栏做成玻璃态胶囊条，更简洁高级 */
+.diagnosis-header {
+    margin: 8px 0 4px;
+    padding: 12px 18px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.9) !important;
+    box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.diagnosis-header > div:first-child {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.diagnosis-title {
+    font-size: 1.05rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+}
+
+.diagnosis-subtitle {
+    font-size: 0.85rem;
+    color: #6b7280 !important;
+}
+
+/* 顶部按钮做成小胶囊，弱化存在感但保留功能 */
+.diagnosis-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.diagnosis-actions .back-btn,
+.diagnosis-actions .btn {
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    border: 1px solid rgba(148, 163, 184, 0.55);
+    background: rgba(248, 250, 252, 0.9);
+    box-shadow: 0 8px 18px rgba(148, 163, 184, 0.35);
+}
+
+.diagnosis-actions .back-btn i {
+    margin-right: 4px;
+}
+
+.diagnosis-actions .btn:hover,
+.diagnosis-actions .back-btn:hover {
+    background: white;
+    transform: translateY(-1px);
+}
+
+/* 中央头像区域再精修：上下留白更均衡 */
+.diagnosis-content {
+    padding-top: 28px !important;
+}
+
+.avatar-container {
+    margin-top: 8px !important;
+    margin-bottom: 12px !important;
+}
+
+/* 头像下方的AI文本区域与整体版心对齐 */
+#diagnosis-question {
+    margin-top: 12px;
+}
+
+/* 保证波形条在头像正下方，整体视觉为一列 */
+.avatar-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+}
+
+
+
+/* === Chat Unified Shell UI (competition v4) === */
+
+/* 让聊天页成为一体式玻璃卡片，整体更像一个独立模块 */
+#page-chat .page-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 16px;
+}
+
+.chat-diagnosis-container {
+    max-width: 980px;
+    width: 100%;
+    height: auto;
+    min-height: 520px;
+    border-radius: 28px;
+    background: radial-gradient(circle at top, rgba(255,255,255,0.96) 0%, rgba(248,250,252,0.94) 40%, rgba(239,246,255,0.96) 100%);
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    box-shadow: 0 30px 80px rgba(15, 23, 42, 0.18);
+    backdrop-filter: blur(26px);
+    -webkit-backdrop-filter: blur(26px);
+    padding: 18px 22px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* 顶部标题区域：居中 + 右侧轻量操作按钮 */
+.diagnosis-header {
+    padding: 8px 4px 4px;
+    margin: 0;
+    border-radius: 18px;
+    background: transparent !important;
+    box-shadow: none !important;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.diagnosis-header > div:first-child {
+    align-items: center;
+    text-align: center;
+}
+
+.diagnosis-title {
+    font-size: 0.9rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: #6b7280;
+}
+
+.diagnosis-subtitle {
+    font-size: 0.88rem;
+    margin-top: 4px;
+    color: #4b5563 !important;
+}
+
+/* 操作按钮右上角悬浮排列，弱化但保留功能 */
+.diagnosis-actions {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    gap: 6px;
+}
+
+.diagnosis-actions .back-btn,
+.diagnosis-actions .btn {
+    padding: 4px 10px;
+    font-size: 0.78rem;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.9);
+    border: 1px solid rgba(148,163,184,0.55);
+    box-shadow: 0 10px 24px rgba(148, 163, 184, 0.45);
+}
+
+/* 中间对话区域与底部输入区融为一体 */
+.diagnosis-content {
+    flex: 1;
+    padding: 26px 12px 8px !important;
+    gap: 18px;
+}
+
+/* 头像 + 波形 + 文本在一条中轴线上 */
+.avatar-container {
+    margin-top: 4px !important;
+    margin-bottom: 8px !important;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+}
+
+/* 底部语音按钮与上方内容同一张卡片内 */
+.diagnosis-input-container {
+    margin-top: 4px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(226, 232, 240, 0.9) !important;
+    background: transparent !important;
+}
+
+/* 底部大圆形语音按钮微调，使其更融入整体 */
+#diagnosis-voice-btn {
+    width: 70px;
+    height: 70px;
+    box-shadow: 0 16px 40px rgba(59, 130, 246, 0.32);
+}
+
+#diagnosis-voice-btn.listening {
+    box-shadow: 0 20px 52px rgba(59, 130, 246, 0.52);
+}
+
+/* 移除多余边框和背景，确保“一体式”观感 */
+#page-chat {
+    background: radial-gradient(circle at top, #ffffff 0%, #f3f4f6 48%, #e5edff 100%) !important;
+}
+
+
+/* === Chat Header Actions Layout Fix (buttons moved aside) === */
+#page-chat .diagnosis-header {
+    justify-content: space-between;
+    padding-right: 8px;
+}
+
+#page-chat .diagnosis-header > div:first-child {
+    align-items: flex-start;
+    text-align: left;
+}
+
+#page-chat .diagnosis-actions {
+    position: static;
+    transform: none;
+}
+
+
+        /* 诊断对话页面：仅保留语音按钮，隐藏文本输入框和发送按钮，让界面更干净 */
+        #page-chat .diagnosis-input {
+            display: none;
+        }
+        #page-chat .diagnosis-send-btn {
+            display: none;
+        }
+        #page-chat .diagnosis-input-container {
+            justify-content: center;
+        }
+
+    
+        /* 聊天诊断页面：隐藏文字输入框和发送按钮，仅保留语音输入+结束按钮 */
+        #page-chat .diagnosis-input {
+            display: none;
+        }
+        #page-chat .diagnosis-send-btn {
+            display: none;
+        }
+        #page-chat .diagnosis-input-container {
+            justify-content: center;
+        }
+
+    
+
+        /* === 比赛版：统一隐藏所有语音识别旁边的“结束”按钮 === */
+        .voice-end-wrapper {
+            display: none !important;
+            justify-content: flex-end;
+            margin-top: 4px;
+        }
+
+        .voice-end-btn {
+            position: relative;
+            padding: 2px 10px;
+            font-size: 0.72rem;
+            border-radius: 999px;
+            border: 1px solid rgba(148, 163, 184, 0.7);
+            background: rgba(248, 250, 252, 0.85);
+            color: #4b5563;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            transition: all 0.18s ease;
+            display: none !important;
+        }
+
+        .voice-end-btn.visible {
+            display: none !important;
+        }
+</style>
+</head>
+<body>
+    <!-- 开场动画 -->
+    <div id="intro-screen">
+        <div class="logo">汽车<span>AI智能诊断</span></div>
+        <div class="subtitle">智能诊断 · 精准维修 · 专业服务</div>
+        <div class="loading-bar">
+            <div class="loading-progress"></div>
+        </div>
+        <div class="loading-text">正在初始化系统...</div>
+    </div>
+
+    <!-- API状态指示器 -->
+    <div class="api-status connecting" id="api-status">
+        <i class="fas fa-circle"></i> 连接AI服务中...
+    </div>
+
+    <!-- 语音输入指示器 -->
+    <div class="voice-indicator" id="voice-indicator">
+        <!-- 右上角关闭按钮：点击即可结束语音识别 -->
+        <button class="voice-indicator-close" id="voice-indicator-close" aria-label="结束语音输入">
+            &times;
+        </button>
+        <div class="voice-pulse">
+            <i class="fas fa-microphone fa-2x"></i>
+        </div>
+        <p>正在聆听...请说话</p>
+    </div>
+
+    <!-- 登录注册页面 -->
+    <div id="page-auth" class="page">
+        <div class="page-content">
+            <div class="page-header">
+                <div>
+                    <div class="page-title">欢迎使用汽车AI智能诊断系统</div>
+                    <div class="page-subtitle">请登录或注册以开始使用</div>
+                </div>
+            </div>
+            <div class="auth-container">
+                <div class="auth-form">
+                    <h2 class="auth-title">汽车AI智能诊断</h2>
+                    <p class="auth-subtitle">智能诊断 · 精准维修 · 专业服务</p>
+                    
+                    <div class="auth-tabs">
+                        <div class="auth-tab active" id="login-tab">登录</div>
+                        <div class="auth-tab" id="register-tab">注册</div>
+                    </div>
+                    
+                    <!-- 错误提示 -->
+                    <div class="error-message" id="auth-error"></div>
+                    
+                    <div class="auth-form-content active" id="login-form">
+                        <div class="form-group">
+                            <label class="form-label">手机号</label>
+                            <input type="tel" class="form-input" id="login-phone" placeholder="请输入手机号">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">密码</label>
+                            <input type="password" class="form-input" id="login-password" placeholder="请输入密码">
+                        </div>
+                        <button class="btn btn-block" id="login-btn">登录</button>
+                    </div>
+                    
+                    <div class="auth-form-content" id="register-form">
+                        <div class="form-group">
+                            <label class="form-label">手机号</label>
+                            <input type="tel" class="form-input" id="register-phone" placeholder="请输入手机号">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">密码</label>
+                            <input type="password" class="form-input" id="register-password" placeholder="请输入密码">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">确认密码</label>
+                            <input type="password" class="form-input" id="register-confirm" placeholder="请再次输入密码">
+                        </div>
+                        <button class="btn btn-block" id="register-btn">注册</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 导航栏 -->
+    <div class="navbar" id="navbar" style="display: none;">
+        <div class="logo" style="font-size: 1.2rem; color: var(--dark);">汽车<span style="color: var(--accent);">AI智能诊断</span></div>
+        <div class="nav-links">
+            <div class="nav-link active" data-page="page-brand">首页</div>
+            <div class="nav-link" data-page="page-profile">个人中心</div>
+            <div class="nav-link" id="logout-btn">退出登录</div>
+        </div>
+    </div>
+
+    <!-- 品牌选择页面 -->
+    <div id="page-brand" class="page">
+        <div class="page-content">
+            <div class="page-header">
+                <div>
+                    <div class="page-title">选择汽车品牌</div>
+                    <div class="page-subtitle">请选择您要诊断的汽车品牌</div>
+                </div>
+            </div>
+            <div class="brands-container">
+                <div class="search-box">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" class="search-input" id="brand-search-input" placeholder="搜索汽车品牌...">
+                </div>
+                
+                <div class="category-tabs">
+                    <div class="category-tab active" data-category="all">全部品牌</div>
+                    <div class="category-tab" data-category="德系">德系</div>
+                    <div class="category-tab" data-category="日系">日系</div>
+                    <div class="category-tab" data-category="美系">美系</div>
+                    <div class="category-tab" data-category="国产">国产</div>
+                    <div class="category-tab" data-category="新能源">新能源</div>
+                    <div class="category-tab" data-category="韩系">韩系</div>
+                </div>
+                
+                <div class="brands-grid" id="brands-grid">
+                    <!-- 品牌卡片将通过JavaScript动态生成 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 车辆信息录入页面 -->
+    <div id="page-vehicle" class="page">
+        <div class="page-content">
+            <div class="page-header">
+                <div>
+                    <button class="back-btn" id="back-to-brands">
+                        <i class="fas fa-arrow-left"></i> 返回品牌选择
+                    </button>
+                </div>
+                <div>
+                    <div class="page-title">车辆信息录入</div>
+                    <div class="page-subtitle">请输入车辆详细信息以开始诊断</div>
+                </div>
+                <div></div> <!-- 占位元素 -->
+            </div>
+            <div class="vehicle-form-container">
+                <div class="vehicle-form">
+                    <h2 class="form-title">车辆信息</h2>
+                    <p class="form-subtitle">请准确输入车辆信息，系统将基于此进行智能诊断</p>
+                    
+                    <div class="selected-brand" id="selected-brand-display">
+                        <!-- 选中的品牌信息将通过JavaScript动态生成 -->
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">VIN码</label>
+                        <div class="input-with-icon">
+                            <input type="text" class="form-input" id="vin-input" placeholder="请输入17位车辆识别码">
+                            <button class="voice-input-btn" id="voice-input-btn">
+                                <i class="fas fa-microphone"></i>
+                            </button>
+                        </div>
+                        <div class="voice-end-wrapper">
+                            <button type="button" class="voice-end-btn" id="voice-end-vin">
+                                结束
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">汽车型号</label>
+                            <select class="form-input" id="model-select">
+                                <option value="">请选择型号</option>
+                                <!-- 型号选项将通过JavaScript动态生成 -->
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">生产年份</label>
+                            <select class="form-input" id="year-select">
+                                <option value="">请选择年份</option>
+                                <!-- 年份选项将通过JavaScript动态生成 -->
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <button class="btn btn-block" id="start-diagnosis-btn">开始AI诊断</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 问题描述页面 -->
+    <div id="page-problem" class="page">
+        <div class="page-content">
+            <div class="page-header">
+                <div>
+                    <button class="back-btn" id="back-to-vehicle">
+                        <i class="fas fa-arrow-left"></i> 返回车辆信息
+                    </button>
+                </div>
+                <div>
+                    <div class="page-title">问题描述</div>
+                    <div class="page-subtitle">请输入您遇到的问题</div>
+                </div>
+                <div></div> <!-- 占位元素 -->
+            </div>
+            <div class="problem-form-container">
+                <div class="problem-form">
+                    <h2 class="form-title">问题描述</h2>
+                    <p class="form-subtitle">请输入您遇到的问题，AI助手将为您提供诊断方案</p>
+                    
+                    <textarea class="problem-input" id="problem-input" placeholder="例如：车辆无法启动、发动机异响、充电故障等..."></textarea>
+                    
+                    <div class="suggested-problems">
+                        <div class="suggested-problem">车辆无法启动</div>
+                        <div class="suggested-problem">发动机异响</div>
+                        <div class="suggested-problem">刹车系统故障</div>
+                        <div class="suggested-problem">空调不制冷</div>
+                        <div class="suggested-problem">交流无法充电</div>
+                        <div class="suggested-problem">电池续航下降</div>
+                    </div>
+                    
+                    <div class="input-with-icon">
+                        <button class="voice-input-btn" id="problem-voice-btn">
+                            <i class="fas fa-microphone"></i>
+                        </button>
+                    </div>
+                    <div class="voice-end-wrapper">
+                        <button type="button" class="voice-end-btn" id="voice-end-problem">
+                            结束
+                        </button>
+                    </div>
+                    
+                    <button class="btn btn-block" id="submit-problem-btn">提交问题并开始诊断</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 核心：聊天诊断页面（ChatGPT风格） -->
+    <div id="page-chat" class="page">
+        <div class="page-content">
+            <div class="chat-diagnosis-container">
+                <div class="diagnosis-header">
+                    <div>
+                        <div class="diagnosis-title">汽车AI智能诊断</div>
+                        <div class="diagnosis-subtitle" id="diagnosis-subtitle">正在诊断：交流无法充电问题</div>
+                    </div>
+                    <div class="diagnosis-actions">
+                        <button class="back-btn" id="back-to-problem">
+                            <i class="fas fa-arrow-left"></i> 返回
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 对话内容区（含动态头像） -->
+                <div class="diagnosis-content" id="diagnosis-content">
+                    <!-- 动态头像 -->
+                    <div class="avatar-container">
+    <div class="waveform-bars"><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div></div>
+                        <div class="chat-avatar" id="chat-avatar">
+                            <div class="avatar-wave"></div>
+                            <div class="avatar-wave"></div>
+                            <div class="avatar-wave"></div>
+                            <i class="fas fa-robot"></i>
+                        </div>
+                    </div>
+                    <!-- 初始诊断问题 -->
+                    <div class="diagnosis-question fade-in-text" id="diagnosis-question">
+                        车辆是否能上高压电？
+                    </div>
+                </div>
+                
+                <!-- 输入区域 -->
+                
+                <div class="diagnosis-input-container">
+                    <button class="diagnosis-action-btn" id="diagnosis-voice-btn" title="语音输入">
+                        <i class="fas fa-microphone"></i>
+                    </button>
+                    <button type="button" class="voice-end-btn voice-end-chat" id="voice-end-chat">
+                        结束
+                    </button>
+                    <!-- 保留输入框和发送按钮供脚本内部使用，但在UI中隐藏 -->
+                    <input type="text" class="diagnosis-input" id="diagnosis-input" placeholder="输入您的回答..." />
+                    <button class="diagnosis-send-btn" id="diagnosis-send-btn">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- 个人中心页面 -->
+    <div id="page-profile" class="page">
+        <div class="page-content">
+            <div class="page-header">
+                <div>
+                    <button class="back-btn" id="back-to-home">
+                        <i class="fas fa-arrow-left"></i> 返回首页
+                    </button>
+                </div>
+                <div>
+                    <div class="page-title">个人中心</div>
+                    <div class="page-subtitle">管理您的个人信息和诊断历史</div>
+                </div>
+                <div></div> <!-- 占位元素 -->
+            </div>
+            <div class="profile-container">
+                <div class="profile-form">
+                    <div class="profile-avatar">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    
+                    <!-- 个人中心导航 -->
+                    <div class="profile-nav-container">
+                        <div class="profile-nav-btn active" data-tab="profile-info">个人信息</div>
+                        <div class="profile-nav-btn" data-tab="diagnosis-history">诊断历史</div>
+                        <div class="profile-nav-btn" data-tab="settings">设置</div>
+                    </div>
+                    
+                    <div class="profile-content active" id="profile-info">
+                        <div class="form-group">
+                            <label class="form-label">联系电话</label>
+                            <input type="tel" class="form-input" id="profile-phone" placeholder="请输入您的联系电话">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">车牌号</label>
+                            <input type="text" class="form-input" id="profile-plate" placeholder="请输入您的车牌号">
+                        </div>
+                        
+                        <div class="profile-stats">
+                            <div class="stat-card">
+                                <div class="stat-value" id="diagnosis-count">0</div>
+                                <div class="stat-label">诊断次数</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="solved-count">0</div>
+                                <div class="stat-label">已解决问题</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="saved-count">0</div>
+                                <div class="stat-label">保存的诊断</div>
+                            </div>
+                        </div>
+                        
+                        <button class="btn btn-block" id="save-profile-btn">保存个人信息</button>
+                        <button class="btn btn-block" id="logout-profile-btn" style="margin-top: 12px; background: var(--secondary);">退出登录</button>
+                    </div>
+                    
+                    <div class="profile-content" id="diagnosis-history">
+                        <h3 style="margin-bottom: 16px; color: var(--dark); font-size: 1.1rem;">诊断历史记录</h3>
+                        <div class="history-list" id="diagnosis-history-list">
+                            <!-- 诊断历史将通过JavaScript动态生成 -->
+                        </div>
+                    </div>
+                    
+                    <div class="profile-content" id="settings">
+                        <h3 style="margin-bottom: 16px; color: var(--dark); font-size: 1.1rem;">应用设置</h3>
+                        
+                        <div class="settings-option">
+                            <div>
+                                <div class="settings-label">语音输入</div>
+                                <div class="settings-description">启用语音输入功能</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" checked id="voice-input-toggle">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        
+                        <div class="settings-option">
+                            <div>
+                                <div class="settings-label">播音腔语音反馈</div>
+                                <div class="settings-description">启用AI播音腔语音输出</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" checked id="voice-output-toggle">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        
+                        <div class="settings-option">
+                            <div>
+                                <div class="settings-label">自动保存诊断</div>
+                                <div class="settings-description">自动保存所有诊断记录</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        
+                        <div class="settings-option">
+                            <div>
+                                <div class="settings-label">深色模式</div>
+                                <div class="settings-description">切换到深色主题</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        
+                        <div style="margin-top: 24px;">
+                            <button class="btn btn-block" id="clear-data-btn" style="background: var(--danger);">清除所有数据</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+
+// === Global sanitize: remove punctuation ===
+function sanitizeText(t){
+    try { return t.replace(/[，。、“”‘’？！,.!?]/g, ''); }
+    catch(e){ return t; }
+}
+
+        // 1. 基础数据定义
+        const brands = [
+            { name: "比亚迪", logo: "https://ts1.tc.mm.bing.net/th/id/OIP-C.86WsP1pGwpDYKWSci6SlagHaEK?w=253&h=211&c=8&rs=1&qlt=90&o=6&cb=ucfimgc1&dpr=1.5&pid=3.1&rm=2", categories: ["国产", "新能源"] },
+            { name: "奥迪", logo: "https://ts1.tc.mm.bing.net/th/id/OIP-C.iqkPWNlzRABHrQW-nlU1ZgHaE8?w=287&h=211&c=8&rs=1&qlt=90&o=6&cb=ucfimgc1&dpr=1.5&pid=3.1&rm=2", categories: ["德系"] },
+            { name: "宝马", logo: "https://ts1.tc.mm.bing.net/th/id/OIP-C.rCDEgP0fkJeKrZbTP10w3AHaHa?w=172&h=211&c=8&rs=1&qlt=90&o=6&cb=ucfimgc1&dpr=1.5&pid=3.1&rm=2", categories: ["德系"] },
+            { name: "奔驰", logo: "https://ts1.tc.mm.bing.net/th/id/OIP-C.yA86J8vMspt-1XMOQLXr3gHaE8?w=278&h=211&c=8&rs=1&qlt=90&o=6&cb=ucfimgc1&dpr=1.5&pid=3.1&rm=2", categories: ["德系"] },
+            { name: "大众", logo: "https://ts1.tc.mm.bing.net/th/id/OIP-C.A_fHHOQppzXaryWBLOI-ZgHaHJ?w=195&h=211&c=8&rs=1&qlt=90&o=6&cb=ucfimgc1&dpr=1.5&pid=3.1&rm=2", categories: ["德系"] },
+            { name: "保时捷", logo: "https://ts1.tc.mm.bing.net/th/id/OIP-C.BLSlwmB_oWxMFFt1qU4gQAHaH_?w=157&h=211&c=8&rs=1&qlt=90&o=6&cb=ucfimgc1&dpr=1.5&pid=3.1&rm=2", categories: ["德系"] },
+            { name: "丰田", logo: "https://ts1.tc.mm.bing.net/th/id/OIP-C.UpG4hg2gtVopo6fKietOQAHaFG?w=268&h=211&c=8&rs=1&qlt=90&o=6&cb=ucfimgc1&dpr=1.5&pid=3.1&rm=2", categories: ["日系"] },
+            { name: "本田", logo: "https://ts1.tc.mm.bing.net/th/id/OIP-C.hjy0ZLjRn-bgie8cnGpHkwHaEA?w=241&h=211&c=8&rs=1&qlt=90&o=6&cb=ucfimgc1&dpr=1.5&pid=3.1&rm=2", categories: ["日系"] },
+            { name: "日产", logo: "https://ts1.tc.mm.bing.net/th/id/OIP-C.yIE6Q-L3JXIl-ZpX-Mr7vgHaEK?w=287&h=211&c=8&rs=1&qlt=90&o=6&cb=ucfimgc1&dpr=1.5&pid=3.1&rm=2", categories: ["日系"] },
+            { name: "马自达", logo: "https://ts1.tc.mm.bing.net/th/id/OIP-C.e7EddAXHle2zLJWJiSbfpgHaF4?w=233&h=211&c=8&rs=1&qlt=90&o=6&cb=ucfimgc1&dpr=1.5&pid=3.1&rm=2", categories: ["日系"] },
+            { name: "雷克萨斯", logo: "https://ts1.tc.mm.bing.net/th/id/OIP-C.ouN7EyCtcrMv3QDkTFV_qwHaHa?w=191&h=211&c=8&rs=1&qlt=90&o=6&cb=ucfimgc1&dpr=1.5&pid=3.1&rm=2", categories: ["日系"] },
+            { name: "福特", logo: "https://ts1.tc.mm.bing.net/th/id/OIP-C.gpos2A276BK53PeyLd41KwHaHa?w=196&h=211&c=8&rs=1&qlt=90&o=6&cb=ucfimgc1&dpr=1.5&pid=3.1&rm=2", categories: ["美系"] },
+            { name: "别克", logo: "https://ts1.tc.mm.bing.net/th/id/OIP-C.mmQ0WBHNMXU0zhgJMY6QWAHaID?w=180&h=211&c=8&rs=1&qlt=90&o=6&cb=ucfimgc1&dpr=1.5&pid=3.1&rm=2", categories: ["美系"] },
+            { name: "雪佛兰", logo: "https://tse3-mm.cn.bing.net/th/id/OIP-C.vQrkdBRvMAy_bU04IPN7LQHaEb?w=290&h=180&c=7&r=0&o=7&cb=ucfimgc2&dpr=1.5&pid=1.7&rm=3", categories: ["美系"] },
+            { name: "凯迪拉克", logo: "https://tse1-mm.cn.bing.net/th/id/OIP-C.4Y3zxfXpoceIURgqUlnilQHaHa?w=192&h=192&c=7&r=0&o=7&cb=ucfimgc2&dpr=1.5&pid=1.7&rm=3", categories: ["美系"] },
+            { name: "特斯拉", logo: "https://tse1-mm.cn.bing.net/th/id/OIP-C.zpU9mg9vLlMxJGqXoTYthgHaDt?w=325&h=174&c=7&r=0&o=7&cb=ucfimgc2&dpr=1.5&pid=1.7&rm=3", categories: ["新能源"] },
+            { name: "蔚来", logo: "https://tse4-mm.cn.bing.net/th/id/OIP-C.LIdhkI-rQMlEsmu9YYPbYgAAAA?w=154&h=180&c=7&r=0&o=7&cb=ucfimgc2&dpr=1.5&pid=1.7&rm=3", categories: ["新能源"] },
+            { name: "小鹏", logo: "https://tse4-mm.cn.bing.net/th/id/OIP-C.-t6lFLVMgMQtXggsDHrfyAHaDR?w=299&h=154&c=7&r=0&o=7&cb=ucfimgc2&dpr=1.5&pid=1.7&rm=3", categories: ["新能源"] },
+            { name: "理想", logo: "https://tse4-mm.cn.bing.net/th/id/OIP-C.ahYXugXx2-zOZJ9zsjQRcgHaHa?w=164&h=180&c=7&r=0&o=7&cb=ucfimgc2&dpr=1.5&pid=1.7&rm=3", categories: ["新能源"] },
+            { name: "吉利", logo: "https://tse2-mm.cn.bing.net/th/id/OIP-C.EJD6LJpnQ8aHRhW2qp_2FAHaHa?w=156&h=180&c=7&r=0&o=7&cb=ucfimgc2&dpr=1.5&pid=1.7&rm=3", categories: ["国产"] },
+            { name: "长城", logo: "https://tse4-mm.cn.bing.net/th/id/OIP-C.AWjwp7jBKW8T5ufJQI0smwHaE8?w=266&h=180&c=7&r=0&o=7&cb=ucfimgc2&dpr=1.5&pid=1.7&rm=3", categories: ["国产"] },
+            { name: "红旗", logo: "https://tse2-mm.cn.bing.net/th/id/OIP-C.XgGjWwuJhEvSA94ZunMoagHaGI?w=203&h=180&c=7&r=0&o=7&cb=ucfimgc2&dpr=1.5&pid=1.7&rm=3", categories: ["国产"] },
+            { name: "现代", logo: "https://tse4-mm.cn.bing.net/th/id/OIP-C.hnA7Qr8DEg3_bb2WnPHMDAHaES?w=280&h=180&c=7&r=0&o=7&cb=ucfimgc2&dpr=1.5&pid=1.7&rm=3", categories: ["韩系"] },
+            { name: "起亚", logo: "https://tse3-mm.cn.bing.net/th/id/OIP-C.nzaPQFuK_aXjZ3vBSyXrIgHaD0?w=348&h=179&c=7&r=0&o=7&cb=ucfimgc2&dpr=1.5&pid=1.7&rm=3", categories: ["韩系"] }
+        ];
+
+        const models = {
+            "比亚迪": ["汉", "唐", "宋", "秦", "元", "海豚", "海豹", "驱逐舰05", "护卫舰07", "海狮", "仰望U8", "腾势D9", "秦PLUS EV 荣耀版"],
+            "奥迪": ["A3", "A4", "A6", "A8", "Q3", "Q5", "Q7", "Q8", "e-tron", "RS6", "RS7", "S4", "S8"],
+            "宝马": ["1系", "3系", "5系", "7系", "X1", "X3", "X5", "X7", "i3", "i8", "iX3", "iX", "Z4", "M3", "M5"],
+            "奔驰": ["A级", "C级", "E级", "S级", "GLA", "GLC", "GLE", "GLS", "EQC", "EQE", "EQS", "AMG GT", "迈巴赫S级"],
+            "大众": ["Polo", "Golf", "Passat", "Tiguan", "Touran", "ID.3", "ID.4", "ID.6", "途昂", "途观L", "迈腾", "速腾"],
+            "保时捷": ["911", "Panamera", "Cayenne", "Macan", "Taycan", "718 Boxster", "718 Cayman"],
+            "丰田": ["卡罗拉", "凯美瑞", "RAV4", "汉兰达", "普拉多", "亚洲龙", "威兰达", "奕泽", "雷凌", "赛那"],
+            "本田": ["飞度", "思域", "雅阁", "CR-V", "XR-V", "皓影", "缤智", "冠道", "UR-V", "奥德赛", "艾力绅"],
+            "日产": ["轩逸", "天籁", "奇骏", "逍客", "骐达", "蓝鸟", "劲客", "楼兰", "途达", "纳瓦拉"],
+            "马自达": ["马自达3", "马自达6", "CX-4", "CX-5", "CX-8", "CX-30", "MX-5"],
+            "雷克萨斯": ["ES", "LS", "RX", "NX", "UX", "LX", "GX", "LC"],
+            "福特": ["福克斯", "蒙迪欧", "锐界", "探险者", "Mustang", "锐际", "领界", "撼路者", "F-150"],
+            "别克": ["英朗", "君威", "君越", "昂科威", "GL8", "昂科旗", "威朗", "凯越"],
+            "雪佛兰": ["科鲁泽", "迈锐宝", "探界者", "开拓者", "创酷", "创界", "科沃兹", "畅巡"],
+            "凯迪拉克": ["CT4", "CT5", "CT6", "XT4", "XT5", "XT6", "LYRIQ", "凯雷德"],
+            "特斯拉": ["Model S", "Model 3", "Model X", "Model Y", "Cybertruck", "Roadster"],
+            "蔚来": ["ES6", "ES8", "EC6", "ET7", "ET5", "ES7"],
+            "小鹏": ["G3", "P5", "P7", "G9"],
+            "理想": ["理想ONE", "理想L9", "理想L8", "理想L7"],
+            "吉利": ["帝豪", "博越", "星越", "星瑞", "缤越", "豪越", "嘉际", "几何A", "几何C"],
+            "长城": ["哈弗H6", "哈弗大狗", "坦克300", "欧拉好猫", "哈弗神兽", "哈弗酷狗", "魏牌摩卡", "魏牌拿铁"],
+            "红旗": ["H5", "H7", "H9", "HS5", "HS7", "E-HS9", "L5", "HQ9"],
+            "现代": ["伊兰特", "索纳塔", "胜达", "途胜", "ix35", "悦动", "名图", "库斯途"],
+            "起亚": ["K3", "K5", "智跑", "奕跑", "嘉华", "KX3", "KX5", "狮铂拓界"]
+        };
+        // 年份数据（2024-2000年，按倒序排列）
+        const years = [];
+        for (let i = 2024; i >= 2000; i--) {
+            years.push(i);
+        }
+        // 诊断流程数据（针对汽车故障的阶梯式提问）
+        const diagnosisFlow = [
+            { question: "车辆是否能上高压电？", options: ["是", "否"] },
+            { question: "动力电池SOC是否满足充电条件？", options: ["是", "否"] },
+            { question: "组合仪表充电连接是否点亮？", options: ["是", "否"] },
+            { question: "仪表是否显示充电连接中界面？", options: ["是", "否"] },
+            { question: "组合仪表是否跳转至连接成功充电中界面？", options: ["是", "否"] },
+            { question: "测量CP信号波形是否为-12V至9VPWM波信号？", options: ["是", "否"] },
+            { question: "观察数据流S2开关状态是否闭合？", options: ["是", "否"] },
+            { question: "观察数据流脉宽调制占空比是否正常？", options: ["是", "否"] }
+        ];
+        // 全局状态变量（管理页面交互与数据）
+        let currentStep = 0;          // 当前诊断步骤
+        let diagnosisSubtitleTimer = null; // 控制头像下方字幕逐字浮现的计时器
+        let selectedBrand = null;     // 选中的汽车品牌
+        let currentProblem = "";      // 用户描述的问题
+        let currentCarInfo = "";      // 完整车辆信息（品牌+型号+年份）
+        let conversationHistory = []; // 对话历史（用于AI交互）
+        let isAIConnected = false;    // AI服务连接状态
+        let isChargingProblem = false;// 是否为充电类问题
+        let chatHistoryData = [];     // 诊断历史记录
+        let currentChatId = null;     // 当前聊天会话ID
+        let recognition = null;       // 语音识别实例
+        let synthesis = null;         // 语音合成实例
+        let preferredVoice = null;    // 播音腔语音缓存（优先选择系统播音风格）
+        let isUserSpeaking = false;   // 用户说话状态（控制头像波动）
+        let isAISpeaking = false;    // AI说话状态（控制头像波动）
+
+        // DOM元素获取（关联页面所有交互元素）
+        const introScreen = document.getElementById('intro-screen');
+        const apiStatus = document.getElementById('api-status');
+        const pageAuth = document.getElementById('page-auth');
+        const navbar = document.getElementById('navbar');
+        const pageBrand = document.getElementById('page-brand');
+        const pageVehicle = document.getElementById('page-vehicle');
+        const pageProblem = document.getElementById('page-problem');
+        const pageChat = document.getElementById('page-chat');
+        const pageProfile = document.getElementById('page-profile');
+        const brandsGrid = document.getElementById('brands-grid');
+        const selectedBrandDisplay = document.getElementById('selected-brand-display');
+        const vinInput = document.getElementById('vin-input');
+        const voiceInputBtn = document.getElementById('voice-input-btn');
+        const modelSelect = document.getElementById('model-select');
+        const yearSelect = document.getElementById('year-select');
+        const startDiagnosisBtn = document.getElementById('start-diagnosis-btn');
+        const backToBrandsBtn = document.getElementById('back-to-brands');
+        const backToVehicleBtn = document.getElementById('back-to-vehicle');
+        const backToProblemBtn = document.getElementById('back-to-problem');
+        const backToHomeBtn = document.getElementById('back-to-home');
+        const problemInput = document.getElementById('problem-input');
+        const problemVoiceBtn = document.getElementById('problem-voice-btn');
+        const submitProblemBtn = document.getElementById('submit-problem-btn');
+        const suggestedProblems = document.querySelectorAll('.suggested-problem');
+        const diagnosisContent = document.getElementById('diagnosis-content');
+        const diagnosisQuestion = document.getElementById('diagnosis-question');
+        const diagnosisSubtitle = document.getElementById('diagnosis-subtitle');
+        const diagnosisInput = document.getElementById('diagnosis-input');
+        const diagnosisVoiceBtn = document.getElementById('diagnosis-voice-btn');
+        const diagnosisSendBtn = document.getElementById('diagnosis-send-btn');
+        const restartDiagnosisBtn = document.getElementById('restart-diagnosis-btn');
+        const navLinks = document.querySelectorAll('.nav-link');
+        const profilePhone = document.getElementById('profile-phone');
+        const profilePlate = document.getElementById('profile-plate');
+        const saveProfileBtn = document.getElementById('save-profile-btn');
+        const diagnosisCount = document.getElementById('diagnosis-count');
+        const solvedCount = document.getElementById('solved-count');
+        const savedCount = document.getElementById('saved-count');
+        const loginTab = document.getElementById('login-tab');
+        const registerTab = document.getElementById('register-tab');
+        const loginForm = document.getElementById('login-form');
+        const registerForm = document.getElementById('register-form');
+        const loginBtn = document.getElementById('login-btn');
+        const registerBtn = document.getElementById('register-btn');
+        const logoutBtn = document.getElementById('logout-btn');
+        const voiceIndicator = document.getElementById('voice-indicator');
+        const voiceIndicatorClose = document.getElementById('voice-indicator-close');
+        const profileNavBtns = document.querySelectorAll('.profile-nav-btn');
+        const profileContents = document.querySelectorAll('.profile-content');
+        const diagnosisHistoryList = document.getElementById('diagnosis-history-list');
+        const clearDataBtn = document.getElementById('clear-data-btn');
+        const authError = document.getElementById('auth-error');
+        const logoutProfileBtn = document.getElementById('logout-profile-btn');
+        const brandSearchInput = document.getElementById('brand-search-input');
+        const categoryTabs = document.querySelectorAll('.category-tab');
+        const voiceInputToggle = document.getElementById('voice-input-toggle');
+        const voiceOutputToggle = document.getElementById('voice-output-toggle');
+        const chatAvatar = document.getElementById('chat-avatar'); // 动态波动头像元素
+
+        // 后端API配置（对接AI诊断服务）
+        // 本地调试：使用 http://localhost:3001
+        // 线上访问（例如 Vercel 域名）：使用你在 Render 部署的后端地址
+        const isLocalEnv = (
+            window.location.hostname === 'localhost' ||
+            window.location.hostname === '127.0.0.1' ||
+            window.location.protocol === 'file:'
+        );
+
+        const API_BASE_URL = isLocalEnv
+            ? 'http://localhost:3001'
+            : 'https://one2345-dfwo.onrender.com';
+
+        const API_ENDPOINTS = {
+            chat: `${API_BASE_URL}/api/chat`,    // AI对话接口
+            health: `${API_BASE_URL}/health`,  // 服务健康检查接口
+            status: `${API_BASE_URL}/api/status`// 服务状态查询接口
+        };
+
+        // 初始化函数（应用入口，统一启动逻辑）
+        function init() {
+            // 开场动画结束后加载核心内容（4秒后隐藏开场页）
+            setTimeout(() => {
+                introScreen.style.display = 'none';
+                showPage(pageAuth);          // 默认显示登录页
+                renderBrands();             // 渲染品牌卡片
+                populateYearSelect();       // 填充年份下拉框
+                loadProfileData();          // 加载个人中心数据
+                renderDiagnosisHistory();   // 渲染诊断历史
+                loadChatHistory();          // 加载聊天历史
+                
+                // 检查登录状态与AI服务连接
+                checkLoginStatus();
+                checkAPIConnection();
+                
+                // 初始化语音功能（播音腔+识别）
+                initSpeechRecognition();
+                initSpeechSynthesis();
+            }, 4000);
+            
+            // 绑定所有页面交互事件
+            setupEventListeners();
+        }
+
+        // 初始化语音识别（支持VIN码自动识别+填充）
+        function initSpeechRecognition() {
+            // 检查浏览器是否支持语音识别
+            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                recognition = new SpeechRecognition();
+                recognition.continuous = false;    // 不连续识别
+                recognition.interimResults = true; // 返回临时结果（实时显示）
+                recognition.lang = 'zh-CN';       // 识别语言：中文
+                recognition.maxAlternatives = 3;   // 返回3个备选结果（提高准确率）
+                
+                // 识别开始：显示语音指示器+激活头像波动
+                recognition.onstart = function() {
+                    console.log('语音识别已启动');
+                    voiceIndicator.classList.add('active');
+                    isUserSpeaking = true;
+                    toggleAvatarWave(true);
+                };
+                
+                // 实时处理识别结果（填充对应输入框）
+                recognition.onresult = function(event) {
+                    let interimTranscript = ''; // 临时结果（未确认）
+                    let finalTranscript = '';   // 最终结果（已确认）
+                    
+                    for (let i = event.resultIndex; i < event.results.length; ++i) {
+                        const transcript = event.results[i][0].transcript.trim();
+                        if (event.results[i].isFinal) {
+                            finalTranscript += transcript + ' ';
+                        } else {
+                            interimTranscript += transcript + ' ';
+                        }
+                    }
+                    
+                    // 根据当前激活的输入框填充结果
+                    // 优先使用实时的 interimTranscript，让文字一边说一边出现；若没有临时结果，则回退到最终结果
+                    const mergedText = (interimTranscript || finalTranscript).trim();
+                    
+                    if (voiceInputBtn.classList.contains('listening')) {
+                        // VIN 识别：使用实时文字，并做基础清洗，做到“说一个字出现一个字”的效果
+                        vinInput.value = sanitizeText(mergedText);
+                    } else if (problemVoiceBtn.classList.contains('listening')) {
+                        // 问题描述页：实时将语音转成文字，同时去掉标点符号
+                        problemInput.value = sanitizeText(mergedText);
+                    } else if (diagnosisVoiceBtn.classList.contains('listening')) {
+                        // 诊断对话页：实时填充当前回答
+                        diagnosisInput.value = mergedText;
+                    }
+                };
+                
+                // 识别结束说话的瞬间：一旦检测到用户停止说话，立刻结束本次识别，加快响应
+                recognition.onspeechend = function() {
+                    console.log('检测到用户停止说话，立即结束本次识别');
+                    try {
+                        recognition.stop();
+                    } catch (e) {
+                        console.warn('停止识别时出现异常:', e);
+                    }
+                };
+
+                
+                // 识别错误：隐藏指示器+停止头像波动
+                recognition.onerror = function(event) {
+                    console.error('语音识别错误:', event.error);
+                    voiceIndicator.classList.remove('active');
+                    isUserSpeaking = false;
+                    toggleAvatarWave(false);
+                };
+                
+                // 识别结束：VIN码自动填充逻辑（比亚迪秦PLUS EV 荣耀版）
+                recognition.onend = function() {
+                    console.log('语音识别已结束');
+                    voiceIndicator.classList.remove('active');
+                    isUserSpeaking = false;
+                    toggleAvatarWave(false);
+
+                    // 在清除状态前记录当前是哪个按钮在进行语音输入
+                    const wasVIN = voiceInputBtn.classList.contains('listening');
+                    const wasProblem = problemVoiceBtn.classList.contains('listening');
+                    const wasDiagnosis = diagnosisVoiceBtn.classList.contains('listening');
+
+                    // 清除所有监听按钮状态
+                    voiceInputBtn.classList.remove('listening');
+                    problemVoiceBtn.classList.remove('listening');
+                    diagnosisVoiceBtn.classList.remove('listening');
+
+                    // 识别自然结束后，隐藏所有“结束”按钮
+                    const voiceEndVin = document.getElementById('voice-end-vin');
+                    const voiceEndProblem = document.getElementById('voice-end-problem');
+                    const voiceEndChat = document.getElementById('voice-end-chat');
+                    if (voiceEndVin) voiceEndVin.classList.remove('visible');
+                    if (voiceEndProblem) voiceEndProblem.classList.remove('visible');
+                    if (voiceEndChat) voiceEndChat.classList.remove('visible');
+
+                    // VIN识别：固定自动识别车型
+                    if (wasVIN) {
+                        autoFillVehicleInfo('比亚迪', '秦PLUS EV 荣耀版', '2024');
+                        speakText("VIN码识别成功，已自动填充为2024款比亚迪秦PLUS EV荣耀版");
+                    }
+
+                    // 诊断聊天页：语音识别结束后自动发送当前回答
+                    if (wasDiagnosis && diagnosisInput && diagnosisInput.value.trim()) {
+                        // 走原有发送逻辑（本地诊断/AI诊断分支完全复用）
+                        sendMessage();
+                    }
+                };
+            } else {
+                alert('您的浏览器不支持语音识别功能，建议使用Chrome或Edge浏览器以体验完整功能');
+            }
+        }
+
+        // 初始化语音合成（优先配置播音腔语音）
+        function initSpeechSynthesis() {
+            // 检查浏览器是否支持语音合成
+            if ('speechSynthesis' in window) {
+                synthesis = window.speechSynthesis;
+                // 延迟1.5秒加载语音库（确保语音列表已初始化）
+                setTimeout(() => {
+                    const voices = synthesis.getVoices();
+                    // 筛选播音腔风格语音：中文+包含"Microsoft"（系统播音）、"慧涛"、"晓燕"
+                    const broadcastVoices = voices.filter(voice => 
+                        voice.lang === 'zh-CN' && 
+                        (voice.name.includes('Microsoft') || voice.name.includes('慧涛') || voice.name.includes('晓燕'))
+                    );
+                    
+                    // 优先使用第一个符合条件的播音腔语音
+                    if (broadcastVoices.length > 0) {
+                        preferredVoice = broadcastVoices[0];
+                        console.log('已加载播音腔语音:', preferredVoice.name);
+                    } else {
+                        // 降级使用默认中文语音
+                        const chineseVoices = voices.filter(voice => voice.lang === 'zh-CN');
+                        if (chineseVoices.length > 0) {
+                            preferredVoice = chineseVoices[0];
+                        }
+                        console.log('使用默认中文语音:', preferredVoice?.name || '无可用语音');
+                    }
+                }, 1500);
+            } else {
+                alert('您的浏览器不支持语音合成功能，无法体验播音腔语音反馈');
+            }
+        }
+
+        // 播音腔语音输出函数（控制语速、音调、音量）
+        
+        
+        function speakText(text) {
+            // 所有AI语音输出，都统一在头像下方显示当前这句话（逐字浮现）
+            try {
+                renderDiagnosisQuestion(text);
+            } catch (e) {
+                console.warn('renderDiagnosisQuestion error:', e);
+            }
+
+            // 跳过条件：无合成实例 / 未开启语音输出
+            if (!synthesis || !voiceOutputToggle || !voiceOutputToggle.checked) return;
+
+            // 停止当前语音（避免多个语音叠加）
+            try {
+                synthesis.cancel();
+            } catch (e) {
+                console.warn('synthesis.cancel error:', e);
+            }
+
+            // 按照「旧文件」中的音色参数配置：更偏播音风格但略带亲和力
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'zh-CN';
+            utterance.rate = 0.9;   // 语速略慢，保证清晰度
+            utterance.pitch = 1.1;  // 音调稍高，听起来更精神
+            utterance.volume = 0.8; // 音量稍柔和，避免刺耳
+
+            // 按旧逻辑选择中文女声音色（尽量贴近你喜欢的那种音色）
+            try {
+                const voices = synthesis.getVoices();
+                const chineseVoices = voices.filter(voice =>
+                    voice.lang.includes('zh') || voice.lang.includes('CN') || voice.lang.includes('cn')
+                );
+
+                if (chineseVoices.length > 0) {
+                    // 优先选择女声：名称包含 Female / 女 / Microsoft Xiaoxiao / Google 普通话
+                    const femaleVoice = chineseVoices.find(voice =>
+                        voice.name.includes('Female') ||
+                        voice.name.includes('女') ||
+                        voice.name.includes('Microsoft Xiaoxiao') ||
+                        voice.name.includes('Google 普通话')
+                    );
+
+                    if (femaleVoice) {
+                        utterance.voice = femaleVoice;
+                    } else {
+                        utterance.voice = chineseVoices[0];
+                    }
+                }
+            } catch (e) {
+                console.warn('voice select error:', e);
+            }
+
+            // AI 说话时激活头像波动
+            isAISpeaking = true;
+            toggleAvatarWave(true);
+
+            // 语音结束后停止头像波动
+            utterance.onend = function () {
+                isAISpeaking = false;
+                toggleAvatarWave(false);
+            };
+
+            // 开始播放语音
+            synthesis.speak(utterance);
+        }
+
+
+// 动态头像波动控制（用户/AI说话时激活）
+
+function toggleAvatarWave(isWave) {
+            const avatarContainer = document.querySelector('.avatar-container');
+            // 仅当用户或AI说话时，才显示头像波动
+            if (isWave && (isUserSpeaking || isAISpeaking)) {
+                if (chatAvatar) chatAvatar.classList.add('speaking');
+                if (avatarContainer) avatarContainer.classList.add('speaking');
+            } else {
+                if (chatAvatar) chatAvatar.classList.remove('speaking');
+                if (avatarContainer) avatarContainer.classList.remove('speaking');
+            }
+        }
+
+
+// VIN识别后自动填充车辆信息（品牌+型号+年份）
+        function autoFillVehicleInfo(brandName, modelName, year) {
+            // 查找选中的品牌
+            selectedBrand = brands.find(brand => brand.name === brandName);
+            if (selectedBrand) {
+                renderSelectedBrand();       // 渲染选中的品牌信息
+                populateModelSelect();       // 填充车型下拉框
+                
+                // 强制选中对应车型和年份
+                modelSelect.value = modelName;
+                yearSelect.value = year;
+                
+                // 视觉提示：边框高亮2秒（告知用户已自动填充）
+                modelSelect.style.borderColor = 'var(--accent)';
+                yearSelect.style.borderColor = 'var(--accent)';
+                setTimeout(() => {
+                    modelSelect.style.borderColor = '';
+                    yearSelect.style.borderColor = '';
+                }, 2000);
+            }
+        }
+
+        // 检查AI服务连接状态（健康检查）
+        async function checkAPIConnection() {
+            try {
+                // 初始状态：连接中
+                apiStatus.className = 'api-status connecting';
+                apiStatus.innerHTML = '<i class="fas fa-circle"></i> 连接AI服务中...';
+                
+                // 发送健康检查请求（5秒超时）
+                const response = await fetch(API_ENDPOINTS.health, {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' },
+                    timeout: 5000
+                });
+                
+                // 连接成功
+                if (response.ok) {
+                    isAIConnected = true;
+                    apiStatus.className = 'api-status connected';
+                    apiStatus.innerHTML = '<i class="fas fa-circle"></i> AI服务已连接';
+                } else {
+                    throw new Error('API响应状态异常');
+                }
+            } catch (error) {
+                // 连接失败
+                isAIConnected = false;
+                apiStatus.className = 'api-status disconnected';
+                apiStatus.innerHTML = '<i class="fas fa-circle"></i> AI服务未连接';
+                console.error('AI服务连接失败:', error);
+            }
+        }
+
+        // 检查登录状态（本地存储判断）
+        function checkLoginStatus() {
+            const isLoggedIn = localStorage.getItem('isLoggedIn');
+            const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+            
+            if (isLoggedIn === 'true' && currentUser) {
+                // 已登录：显示导航栏+首页（品牌选择页）
+                navbar.style.display = 'flex';
+                showPage(pageBrand);
+                
+                // 更新个人中心数据
+                profilePhone.value = currentUser.phone || '';
+                profilePlate.value = currentUser.plate || '';
+                diagnosisCount.textContent = currentUser.diagnosisCount || 0;
+                solvedCount.textContent = currentUser.solvedCount || 0;
+                savedCount.textContent = currentUser.savedCount || 0;
+            } else {
+                // 未登录：显示登录页
+                showPage(pageAuth);
+            }
+        }
+
+        // 渲染品牌卡片（动态生成所有品牌）
+        function renderBrands() {
+            brandsGrid.innerHTML = ''; // 清空原有品牌卡片
+            brands.forEach(brand => {
+                const brandCard = document.createElement('div');
+                brandCard.className = 'brand-card';
+                brandCard.innerHTML = `
+                    <img src="${brand.logo}" alt="${brand.name}" class="brand-logo" 
+                         onerror="this.src='https://via.placeholder.com/80x80?text=${brand.name}'">
+                    <div class="brand-name">${brand.name}</div>
+                `;
+                
+                // 品牌卡片点击事件：跳转至车辆信息页
+                brandCard.addEventListener('click', () => {
+                    selectedBrand = brand;
+                    showPage(pageVehicle);
+                    renderSelectedBrand();
+                    populateModelSelect();
+                    // 播音腔提示
+                    speakText("请输入您的VIN码");
+                });
+                
+                brandsGrid.appendChild(brandCard);
+            });
+        }
+
+        // 渲染选中的品牌信息（车辆信息页顶部显示）
+        function renderSelectedBrand() {
+            if (!selectedBrand) return;
+            
+            selectedBrandDisplay.innerHTML = `
+                <img src="${selectedBrand.logo}" alt="${selectedBrand.name}" class="selected-brand-logo" 
+                     onerror="this.src='https://via.placeholder.com/50x50?text=${selectedBrand.name}'">
+                <div class="selected-brand-name">${selectedBrand.name}</div>
+            `;
+        }
+
+        // 填充年份下拉框（2024-2000年）
+        function populateYearSelect() {
+            yearSelect.innerHTML = '<option value="">请选择年份</option>';
+            years.forEach(year => {
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = year;
+                yearSelect.appendChild(option);
+            });
+        }
+
+        // 填充车型下拉框（根据选中的品牌）
+        function populateModelSelect() {
+            if (!selectedBrand) return;
+            
+            modelSelect.innerHTML = '<option value="">请选择型号</option>';
+            const brandModels = models[selectedBrand.name] || [];
+            brandModels.forEach(model => {
+                const option = document.createElement('option');
+                option.value = model;
+                option.textContent = model;
+                modelSelect.appendChild(option);
+            });
+        }
+
+        // 绑定所有页面交互事件（统一管理事件监听）
+        function setupEventListeners() {
+            // 1. 品牌搜索功能（实时过滤品牌卡片）
+            brandSearchInput.addEventListener('input', (e) => {
+                const searchTerm = e.target.value.toLowerCase();
+                document.querySelectorAll('.brand-card').forEach(card => {
+                    const brandName = card.querySelector('.brand-name').textContent.toLowerCase();
+                    card.style.display = brandName.includes(searchTerm) ? 'block' : 'none';
+                });
+            });
+
+            // 2. 品牌分类切换（按德系/日系等筛选）
+            categoryTabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    // 更新分类标签激活状态
+                    categoryTabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    
+                    const category = tab.getAttribute('data-category');
+                    if (category === 'all') {
+                        renderBrands(); // 显示所有品牌
+                    } else {
+                        // 过滤对应分类的品牌
+                        const filteredBrands = brands.filter(brand => brand.categories.includes(category));
+                        renderFilteredBrands(filteredBrands);
+                    }
+                });
+            });
+
+            // 3. 个人中心标签切换（个人信息/诊断历史/设置）
+            profileNavBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    // 更新导航按钮激活状态
+                    profileNavBtns.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    
+                    const tabId = btn.getAttribute('data-tab');
+                    // 显示对应内容区
+                    profileContents.forEach(content => {
+                        content.classList.remove('active');
+                        if (content.id === tabId) content.classList.add('active');
+                    });
+                });
+            });
+
+            // 4. 登录/注册标签切换
+            loginTab.addEventListener('click', () => {
+                loginTab.classList.add('active');
+                registerTab.classList.remove('active');
+                loginForm.classList.add('active');
+                registerForm.classList.remove('active');
+                hideAuthError(); // 隐藏错误提示
+            });
+            registerTab.addEventListener('click', () => {
+                registerTab.classList.add('active');
+                loginTab.classList.remove('active');
+                registerForm.classList.add('active');
+                loginForm.classList.remove('active');
+                hideAuthError(); // 隐藏错误提示
+            });
+
+            // 5. 登录/注册/退出按钮事件
+            loginBtn.addEventListener('click', handleLogin);
+            registerBtn.addEventListener('click', handleRegister);
+            logoutBtn.addEventListener('click', handleLogout);
+            logoutProfileBtn.addEventListener('click', handleLogout);
+
+            // 6. 语音输入按钮事件（VIN页/问题描述页/诊断聊天页）
+            // 6.x 语音识别“结束”按钮：可在任意阶段手动停止识别，避免一直处于监听状态
+            const voiceEndVin = document.getElementById('voice-end-vin');
+            const voiceEndProblem = document.getElementById('voice-end-problem');
+            const voiceEndChat = document.getElementById('voice-end-chat');
+
+            function stopRecognitionManually() {
+                if (!recognition) return;
+                try {
+                    recognition.stop();
+                } catch (e) {
+                    console.warn('手动停止语音识别时出现异常:', e);
+                }
+
+                // 手动停止后，立刻关闭指示器和头像波动
+                if (voiceIndicator) {
+                    voiceIndicator.classList.remove('active');
+                }
+                isUserSpeaking = false;
+                toggleAvatarWave(false);
+
+                // 手动停止后，隐藏所有结束按钮（即便样式上已经被统一隐藏，仍保留逻辑以保证稳定）
+                if (voiceEndVin) voiceEndVin.classList.remove('visible');
+                if (voiceEndProblem) voiceEndProblem.classList.remove('visible');
+                if (voiceEndChat) voiceEndChat.classList.remove('visible');
+            }
+
+            if (voiceEndVin) {
+                voiceEndVin.addEventListener('click', () => {
+                    stopRecognitionManually();
+                });
+            }
+            if (voiceEndProblem) {
+                voiceEndProblem.addEventListener('click', () => {
+                    stopRecognitionManually();
+                });
+            }
+            if (voiceEndChat) {
+                voiceEndChat.addEventListener('click', () => {
+                    stopRecognitionManually();
+                });
+            }
+            // 新增：语音指示器右上角“×”关闭按钮事件
+            if (voiceIndicatorClose) {
+                voiceIndicatorClose.addEventListener('click', () => {
+                    stopRecognitionManually();
+                });
+            }
+
+            voiceInputBtn.addEventListener('click', () => {
+                if (voiceInputToggle.checked) startVoiceInput(vinInput, voiceInputBtn);
+            });
+            problemVoiceBtn.addEventListener('click', () => {
+                if (voiceInputToggle.checked) startVoiceInput(problemInput, problemVoiceBtn);
+            });
+            diagnosisVoiceBtn.addEventListener('click', () => {
+                if (voiceInputToggle.checked) startVoiceInput(diagnosisInput, diagnosisVoiceBtn);
+            });
+
+            // 7. 开始诊断按钮（车辆信息页→问题描述页）
+            startDiagnosisBtn.addEventListener('click', () => {
+                // 校验必填项
+                if (!vinInput.value.trim()) {
+                    alert('请输入17位VIN码');
+                    return;
+                }
+                if (!modelSelect.value) {
+                    alert('请选择汽车型号');
+                    return;
+                }
+                if (!yearSelect.value) {
+                    alert('请选择生产年份');
+                    return;
+                }
+                
+                // 保存完整车辆信息
+                currentCarInfo = `${selectedBrand.name} ${modelSelect.value} ${yearSelect.value}年款`;
+                showPage(pageProblem);
+                // 播音腔引导用户描述问题
+                speakText("请输入您遇到的问题");
+            });
+
+            // 8. 返回按钮系列（页面导航）
+            backToBrandsBtn.addEventListener('click', () => showPage(pageBrand));
+            backToVehicleBtn.addEventListener('click', () => {
+                showPage(pageVehicle);
+                // 返回车辆信息页时，立即引导用户输入VIN码
+                speakText("请输入您的VIN码");
+            });
+            backToProblemBtn.addEventListener('click', () => {
+                showPage(pageProblem);
+                // 返回问题描述页时，立即引导用户描述问题
+                speakText("请输入您遇到的问题");
+            });
+            backToHomeBtn.addEventListener('click', () => showPage(pageBrand));
+
+            // 9. 提交问题按钮（问题描述页→诊断聊天页）
+            submitProblemBtn.addEventListener('click', () => {
+                if (!problemInput.value.trim()) {
+                    alert('请输入车辆问题描述');
+                    return;
+                }
+                
+                // 保存问题描述，更新诊断标题
+                currentProblem = problemInput.value.trim();
+                diagnosisSubtitle.textContent = `正在诊断：${currentProblem}`;
+                showPage(pageChat);
+                
+                // 初始化聊天会话
+                currentChatId = Date.now().toString(); // 用时间戳作为会话ID
+                isChargingProblem = currentProblem.includes('交流无法充电') || currentProblem.includes('无法充电');
+                currentStep = 0;
+                
+                // 重置聊天内容区（保留动态头像）
+                diagnosisContent.innerHTML = `
+                    <div class="avatar-container">
+    <div class="waveform-bars"><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div></div>
+                        <div class="chat-avatar" id="chat-avatar">
+                            <div class="avatar-wave"></div>
+                            <div class="avatar-wave"></div>
+                            <div class="avatar-wave"></div>
+                            <i class="fas fa-robot"></i>
+                        </div>
+                    </div>
+                `;
+                
+                // 启动诊断流程（充电问题用本地流程，其他用AI）
+                if (isChargingProblem) {
+                    startOriginalDiagnosis();
+                } else {
+                    startAIDiagnosis();
+                }
+                
+                // 记录诊断历史，更新诊断次数
+                addToHistory();
+                updateDiagnosisCount();
+            });
+
+            // 10. 建议问题点击填充（快速选择常见问题）
+            suggestedProblems.forEach(problem => {
+                problem.addEventListener('click', () => {
+                    problemInput.value = problem.textContent;
+                });
+            });
+
+            // 11. 诊断聊天页：发送消息（回车/按钮）
+            diagnosisSendBtn.addEventListener('click', sendMessage);
+            diagnosisInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') sendMessage();
+            });
+
+            // 12. 重新诊断按钮（重置诊断流程）
+            if (restartDiagnosisBtn) {
+            restartDiagnosisBtn.addEventListener('click', () => {
+                currentStep = 0;
+                // 重置聊天内容区
+                diagnosisContent.innerHTML = `
+                    <div class="avatar-container">
+    <div class="waveform-bars"><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div></div>
+                        <div class="chat-avatar" id="chat-avatar">
+                            <div class="avatar-wave"></div>
+                            <div class="avatar-wave"></div>
+                            <div class="avatar-wave"></div>
+                            <i class="fas fa-robot"></i>
+                        </div>
+                    </div>
+                `;
+                // 重新启动诊断流程
+                if (isChargingProblem) {
+                    startOriginalDiagnosis();
+                } else {
+                    startAIDiagnosis();
+                }
+            });
+
+                        }
+
+// 13. 导航栏切换页面（首页/个人中心）
+            navLinks.forEach(link => {
+                if (link.id !== 'logout-btn') {
+                    link.addEventListener('click', () => {
+                        const pageId = link.getAttribute('data-page');
+                        showPage(document.getElementById(pageId));
+                        // 更新导航栏激活状态
+                        navLinks.forEach(l => l.classList.remove('active'));
+                        link.classList.add('active');
+                    });
+                }
+            });
+
+            // 14. 个人中心：保存资料/清除数据
+            saveProfileBtn.addEventListener('click', saveProfileData);
+            clearDataBtn.addEventListener('click', () => {
+                if (confirm('确定要清除所有本地数据吗？此操作不可撤销！')) {
+                    localStorage.clear();
+                    alert('所有数据已清除，页面将刷新');
+                    location.reload();
+                }
+            });
+        }
+
+        // 启动语音输入（绑定指定输入框）
+        function startVoiceInput(inputElement, buttonElement) {
+            if (!recognition) {
+                alert('您的浏览器不支持语音识别功能');
+                return;
+            }
+            // 标记按钮为"监听中"状态
+            buttonElement.classList.add('listening');
+
+            // 根据当前按钮，显示对应的“结束”按钮
+            const voiceEndVin = document.getElementById('voice-end-vin');
+            const voiceEndProblem = document.getElementById('voice-end-problem');
+            const voiceEndChat = document.getElementById('voice-end-chat');
+            if (buttonElement.id === 'voice-input-btn' && voiceEndVin) {
+                voiceEndVin.classList.add('visible');
+            } else if (buttonElement.id === 'problem-voice-btn' && voiceEndProblem) {
+                voiceEndProblem.classList.add('visible');
+            } else if (buttonElement.id === 'diagnosis-voice-btn' && voiceEndChat) {
+                voiceEndChat.classList.add('visible');
+            }
+
+            // 清空输入框并聚焦
+            if (inputElement) {
+                inputElement.value = '';
+                inputElement.focus();
+            }
+
+            // 启动语音识别
+            recognition.start();
+        }
+// 登录处理函数（本地存储验证用户）
+        function handleLogin() {
+            const phone = document.getElementById('login-phone').value;
+            const password = document.getElementById('login-password').value;
+            
+            // 校验输入
+            if (!phone || !password) {
+                showAuthError('请输入手机号和密码');
+                return;
+            }
+            
+            // 从本地存储获取用户列表
+            const users = JSON.parse(localStorage.getItem('users')) || [];
+            // 查找匹配的用户
+            const user = users.find(u => u.phone === phone && u.password === password);
+            
+            if (user) {
+                // 登录成功：保存登录状态
+                localStorage.setItem('isLoggedIn', 'true');
+                localStorage.setItem('currentUser', JSON.stringify(user));
+                
+                // 显示导航栏+首页
+                navbar.style.display = 'flex';
+                showPage(pageBrand);
+                
+                // 更新个人中心数据
+                profilePhone.value = user.phone || '';
+                profilePlate.value = user.plate || '';
+                diagnosisCount.textContent = user.diagnosisCount || 0;
+                solvedCount.textContent = user.solvedCount || 0;
+                savedCount.textContent = user.savedCount || 0;
+                
+                hideAuthError();
+                // 播音腔欢迎
+                speakText(`欢迎回来，${user.phone}！已为您加载个人数据，可前往首页选择车辆品牌开始诊断`);
+            } else {
+                // 登录失败：显示错误
+                showAuthError('手机号或密码错误，请重新输入');
+            }
+        }
+
+        // 注册处理函数（本地存储保存用户）
+        function handleRegister() {
+            const phone = document.getElementById('register-phone').value;
+            const password = document.getElementById('register-password').value;
+            const confirm = document.getElementById('register-confirm').value;
+            
+            // 校验输入
+            if (!phone || !password || !confirm) {
+                showAuthError('请填写所有注册信息');
+                return;
+            }
+            if (password !== confirm) {
+                showAuthError('两次输入的密码不一致，请重新确认');
+                return;
+            }
+            if (!/^1[3-9]\d{9}$/.test(phone)) {
+                showAuthError('请输入有效的手机号');
+                return;
+            }
+            
+            // 从本地存储获取用户列表
+            const users = JSON.parse(localStorage.getItem('users')) || [];
+            // 检查手机号是否已注册
+            if (users.find(u => u.phone === phone)) {
+                showAuthError('该手机号已注册，请直接登录或更换手机号');
+                return;
+            }
+            
+            // 创建新用户
+            const newUser = {
+                phone,
+                password,
+                plate: '', // 车牌号（默认空）
+                diagnosisCount: 0, // 诊断次数
+                solvedCount: 0,    // 已解决问题数
+                savedCount: 0      // 保存的诊断数
+            };
+            
+            // 保存新用户到列表
+            users.push(newUser);
+            localStorage.setItem('users', JSON.stringify(users));
+            // 自动登录
+            localStorage.setItem('isLoggedIn', 'true');
+            localStorage.setItem('currentUser', JSON.stringify(newUser));
+            
+            // 显示导航栏+首页
+            navbar.style.display = 'flex';
+            showPage(pageBrand);
+            
+            // 更新个人中心数据
+            profilePhone.value = newUser.phone;
+            profilePlate.value = newUser.plate;
+            diagnosisCount.textContent = newUser.diagnosisCount;
+            solvedCount.textContent = newUser.solvedCount;
+            savedCount.textContent = newUser.savedCount;
+            
+            hideAuthError();
+            alert('注册成功！已为您自动登录');
+            // 播音腔引导
+            speakText(`注册成功！欢迎使用汽车AI智能诊断系统，请选择车辆品牌并输入VIN码，开始故障诊断`);
+        }
+
+        // 退出登录处理函数
+        function handleLogout() {
+            // 清除登录状态和用户数据
+            localStorage.removeItem('isLoggedIn');
+            localStorage.removeItem('currentUser');
+            
+            // 隐藏导航栏，显示登录页
+            navbar.style.display = 'none';
+            showPage(pageAuth);
+            
+            // 清空登录表单
+            document.getElementById('login-phone').value = '';
+            document.getElementById('login-password').value = '';
+            hideAuthError();
+        }
+
+        // 显示登录/注册错误提示
+        function showAuthError(message) {
+            authError.textContent = message;
+            authError.classList.add('show');
+        }
+
+        // 隐藏登录/注册错误提示
+        function hideAuthError() {
+            authError.classList.remove('show');
+        }
+
+        // 渲染过滤后的品牌（按分类筛选）
+        function renderFilteredBrands(filteredBrands) {
+            brandsGrid.innerHTML = '';
+            filteredBrands.forEach(brand => {
+                const brandCard = document.createElement('div');
+                brandCard.className = 'brand-card';
+                brandCard.innerHTML = `
+                    <img src="${brand.logo}" alt="${brand.name}" class="brand-logo" 
+                         onerror="this.src='https://via.placeholder.com/80x80?text=${brand.name}'">
+                    <div class="brand-name">${brand.name}</div>
+                `;
+                // 品牌卡片点击事件
+                brandCard.addEventListener('click', () => {
+                    selectedBrand = brand;
+                    showPage(pageVehicle);
+                    renderSelectedBrand();
+                    populateModelSelect();
+                });
+                brandsGrid.appendChild(brandCard);
+            });
+        }
+
+        // 页面切换函数（控制页面显示/隐藏）
+        function showPage(page) {
+            document.querySelectorAll('.page').forEach(p => {
+                p.classList.remove('active');
+            });
+            page.classList.add('active');
+        }
+
+        // 启动AI诊断流程（调用后端AI服务）
+        async function startAIDiagnosis() {
+            // AI未连接：切换到本地诊断
+            if (!isAIConnected) {
+                renderDiagnosisQuestion("⚠️ AI服务未连接，已自动切换到本地诊断引擎");
+                speakText("AI服务未连接，已自动切换到本地诊断引擎为您服务");
+                startOriginalDiagnosis();
+                return;
+            }
+            
+            try {
+                // 构建初始提示词（包含车辆信息和问题）
+                const carInfo = currentCarInfo || `${selectedBrand.name} ${modelSelect.value} ${yearSelect.value}年款`;
+                const initialPrompt = `
+                    用户车辆信息：${carInfo}
+                    用户问题描述：${currentProblem}
+                    角色：你是专业的汽车诊断专家，语气需使用播音腔（清晰、沉稳、专业），先友好介绍自己，再提出第一个诊断问题（简洁明确，帮助定位故障）。
+                `;
+                
+                // 调用AI对话接口
+                const aiResponse = await callDeepSeekCarDiagnosis(
+                    initialPrompt,
+                    conversationHistory,
+                    carInfo,
+                    currentProblem
+                );
+                
+                // 显示AI回复（带打字机效果）
+                renderDiagnosisQuestion(aiResponse);
+                // 播音腔播放AI回复
+                speakText(aiResponse);
+                
+                // 更新对话历史（用于后续交互）
+                conversationHistory.push(
+                    { role: 'user', content: initialPrompt },
+                    { role: 'assistant', content: aiResponse }
+                );
+            } catch (error) {
+                // AI调用失败：切换到本地诊断
+                renderDiagnosisQuestion("⚠️ AI诊断服务暂时不可用，已切换到本地诊断流程");
+                speakText("AI诊断服务暂时不可用，已切换到本地诊断流程");
+                console.error('AI诊断启动失败:', error);
+                startOriginalDiagnosis();
+            }
+        }
+
+        // 调用DeepSeek 汽车AI智能诊断接口
+        async function callDeepSeekCarDiagnosis(message, history = [], carInfo = '', problem = '') {
+            if (!isAIConnected) throw new Error('AI服务未连接，请检查后端服务');
+            
+            try {
+                const response = await fetch(API_ENDPOINTS.chat, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: message,
+                        history: history,
+                        carInfo: carInfo,
+                        problem: problem,
+                        voiceStyle: 'broadcast' // 告知AI返回播音腔风格文本
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'AI诊断接口请求失败');
+                }
+                
+                const data = await response.json();
+                return data.reply || 'AI未返回有效诊断内容，请补充问题细节';
+            } catch (error) {
+                console.error('调用AI诊断接口失败:', error);
+                throw error;
+            }
+        }
+
+        // 启动本地诊断流程（固定阶梯式提问）
+        
+        // 启动本地诊断流程（固定阶梯式提问）
+        function startOriginalDiagnosis() {
+            // 直接从第一个诊断问题开始，不再输出额外欢迎语，界面更简洁
+            currentStep = 0;
+            askQuestion(currentStep);
+        }
+
+
+function renderDiagnosisQuestion(text) {
+            let questionDiv = document.getElementById('diagnosis-question');
+            // 如果不存在，就创建一个新的诊断文本容器
+            if (!questionDiv) {
+                questionDiv = document.createElement('div');
+                questionDiv.id = 'diagnosis-question';
+                diagnosisContent.appendChild(questionDiv);
+            }
+            // 重置样式以应用浮现动画
+            questionDiv.className = 'diagnosis-question fade-in-text';
+            // 每次输出前先清空内容
+            questionDiv.textContent = '';
+
+            // 若之前有未完成的字幕计时器，先清除
+            if (diagnosisSubtitleTimer) {
+                clearInterval(diagnosisSubtitleTimer);
+                diagnosisSubtitleTimer = null;
+            }
+
+            // 逐字浮现字幕，让文字与AI语音同步感更强
+            const fullText = (text || '').toString().replace(/^\s+/, '');
+            let index = 0;
+            diagnosisSubtitleTimer = setInterval(() => {
+                index++;
+                questionDiv.textContent = fullText.slice(0, index);
+                if (index >= fullText.length) {
+                    clearInterval(diagnosisSubtitleTimer);
+                    diagnosisSubtitleTimer = null;
+                }
+                // 滚动到最新内容
+                diagnosisContent.scrollTop = diagnosisContent.scrollHeight;
+            }, 40);
+        }
+
+
+// 提问函数（根据当前步骤显示问题）
+        function askQuestion(step) {
+            if (step >= diagnosisFlow.length) return;
+            
+            const question = diagnosisFlow[step].question;
+            renderDiagnosisQuestion(question);
+            speakText(question);
+        }
+
+        // 发送消息（用户与AI/本地诊断交互）
+        async function sendMessage() {
+            const message = diagnosisInput.value.trim();
+            if (!message) return; // 空消息不处理
+            
+            // 清空输入框
+            diagnosisInput.value = '';
+            
+            // 1. 充电类问题：只用头像+字幕形式的阶梯式诊断，不保留历史气泡
+            if (isChargingProblem) {
+                handleAnswer(message);
+                return;
+            }
+            
+            // 显示用户消息（右侧气泡，仅非充电类问题保留聊天记录）
+            const userMsgDiv = document.createElement('div');
+            userMsgDiv.className = 'message message-user';
+            userMsgDiv.textContent = message;
+            diagnosisContent.appendChild(userMsgDiv);
+            // 滚动到最新消息
+            diagnosisContent.scrollTop = diagnosisContent.scrollHeight;
+            
+            // 2. 非充电类问题：走AI流程
+            if (!isAIConnected) {
+                // AI未连接：本地默认回复
+                setTimeout(() => {
+                    const defaultReply = `
+                        感谢您的反馈：${message}。由于AI服务暂时未连接，无法提供精准诊断，
+                        建议您检查车辆对应系统的传感器状态，或补充更多故障细节（如故障发生场景、伴随现象），以便进一步分析。
+                    `;
+                    renderDiagnosisQuestion(defaultReply);
+                    speakText(defaultReply);
+                }, 1000);
+                return;
+            }
+            
+            // 3. AI已连接：调用AI获取回复
+            try {
+                const carInfo = currentCarInfo || `${selectedBrand.name} ${modelSelect.value} ${yearSelect.value}年款`;
+                const aiResponse = await callDeepSeekCarDiagnosis(
+                    message,
+                    conversationHistory,
+                    carInfo,
+                    currentProblem
+                );
+                
+                // 显示AI回复（带打字机效果）
+                renderDiagnosisQuestion(aiResponse);
+                // 播音腔播放AI回复
+                speakText(aiResponse);
+                
+                // 更新对话历史
+                conversationHistory.push(
+                    { role: 'user', content: message },
+                    { role: 'assistant', content: aiResponse }
+                );
+            } catch (error) {
+                // AI调用失败：显示错误提示
+                const errorReply = `
+                    抱歉，AI服务暂时无法响应您的反馈：${message}。
+                    请检查网络连接或稍后重试，也可直接联系品牌授权服务中心获取技术支持。
+                `;
+                renderDiagnosisQuestion(errorReply);
+                speakText(errorReply);
+                console.error('发送消息到AI失败:', error);
+            }
+        }
+
+        // 处理本地诊断的用户回答
+        
+        // 处理本地诊断的用户回答
+        function handleAnswer(answer) {
+            // 不再额外输出“已收到您的反馈”，直接根据对话逻辑进入下一步
+
+            // 进入下一步
+            currentStep++;
+
+            // 轻微延迟后继续提问或结束诊断，保证语音节奏自然
+            setTimeout(() => {
+                if (currentStep < diagnosisFlow.length) {
+                    askQuestion(currentStep); // 继续下一个问题
+                } else {
+                    // 诊断完成：显示故障点与建议
+                    const completionMsg = `
+                        故障点为高压多合一模块内部S2开关的控制线路及原件。
+                        建议解决方案：
+                        1. 使用万用表检查S2开关控制线路是否存在松动、短路或断路；
+                        2. 通过诊断仪检测S2开关元件通断状态，判断是否需要更换；
+                        3. 若您不具备维修条件，建议联系比亚迪品牌授权服务中心进行专业维修。
+                        如需重新诊断，请点击页面上方的“重新诊断”按钮。
+                    `;
+                    renderDiagnosisQuestion(completionMsg);
+                    speakText(completionMsg);
+                    updateSolvedCount(); // 更新已解决问题数
+                }
+            }, 200);
+        }
+
+        // 加载聊天历史（从本地存储）
+function loadChatHistory() {
+            const savedHistory = localStorage.getItem('chatHistory');
+            chatHistoryData = savedHistory ? JSON.parse(savedHistory) : [];
+        }
+
+        // 保存聊天历史（到本地存储）
+        function saveChatHistory() {
+            localStorage.setItem('chatHistory', JSON.stringify(chatHistoryData));
+        }
+
+        // 添加诊断记录到历史
+        function addToHistory() {
+            const chatItem = {
+                id: currentChatId,
+                date: new Date().toLocaleString(), // 诊断时间（本地时间）
+                carInfo: currentCarInfo,          // 车辆信息
+                problem: currentProblem,          // 问题描述
+                status: "pending"                 // 状态：处理中
+            };
+            
+            // 去重：若存在相同ID的记录，替换；否则新增到头部
+            const existingIndex = chatHistoryData.findIndex(c => c.id === currentChatId);
+            if (existingIndex !== -1) {
+                chatHistoryData[existingIndex] = chatItem;
+            } else {
+                chatHistoryData.unshift(chatItem);
+            }
+            
+            // 保存到本地存储
+            saveChatHistory();
+        }
+
+        // 渲染诊断历史记录（个人中心）
+        function renderDiagnosisHistory() {
+            diagnosisHistoryList.innerHTML = '';
+            
+            // 优先使用本地存储的历史，无数据则显示模拟数据
+            const historyData = chatHistoryData.length > 0 
+                ? chatHistoryData.map(item => ({
+                    date: item.date,
+                    brand: item.carInfo || '未知车辆',
+                    problem: item.problem,
+                    solution: item.status === 'solved' ? '故障已定位，查看诊断详情' : '诊断中',
+                    status: item.status
+                }))
+                : [
+                    {
+                        date: new Date().toLocaleDateString(),
+                        brand: "比亚迪 秦PLUS EV 荣耀版 2024年款",
+                        problem: "车辆无法启动",
+                        solution: "检查电池正极连接线松动，重新插拔并紧固后故障排除",
+                        status: "solved"
+                    },
+                    {
+                        date: new Date(Date.now() - 86400000).toLocaleDateString(),
+                        brand: "特斯拉 Model Y 2023年款",
+                        problem: "交流充电速度慢（仅2kW）",
+                        solution: "充电桩功率设置为“家用模式”，切换到“快充模式”后恢复至7kW",
+                        status: "solved"
+                    },
+                    {
+                        date: new Date(Date.now() - 172800000).toLocaleDateString(),
+                        brand: "宝马 3系 2022年款",
+                        problem: "发动机冷启动时有异响",
+                        solution: "建议检查正时链条张紧器，冷启动时油压不足可能导致异响",
+                        status: "pending"
+                    }
+                ];
+            
+            // 渲染每条历史记录
+            historyData.forEach(item => {
+                const historyItem = document.createElement('div');
+                historyItem.className = 'history-item';
+                historyItem.innerHTML = `
+                    <div class="history-header">
+                        <div class="history-date">${item.date}</div>
+                        <div class="history-brand">${item.brand}</div>
+                    </div>
+                    <div class="history-problem">问题：${item.problem}</div>
+                    <div class="history-solution">解决方案：${item.solution}</div>
+                    <div class="history-status ${item.status === 'solved' ? 'status-solved' : 'status-pending'}">
+                        ${item.status === 'solved' ? '已解决' : '处理中'}
+                    </div>
+                `;
+                diagnosisHistoryList.appendChild(historyItem);
+            });
+        }
+
+        // 保存个人中心数据（手机号、车牌号、统计数）
+        function saveProfileData() {
+            const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+            if (!currentUser) {
+                alert('请先登录后再保存个人信息');
+                return;
+            }
+            
+            // 获取用户列表
+            const users = JSON.parse(localStorage.getItem('users')) || [];
+            
+            // 更新当前用户信息
+            currentUser.phone = profilePhone.value;
+            currentUser.plate = profilePlate.value;
+            currentUser.diagnosisCount = parseInt(diagnosisCount.textContent);
+            currentUser.solvedCount = parseInt(solvedCount.textContent);
+            currentUser.savedCount = parseInt(savedCount.textContent);
+            
+            // 更新用户列表中的对应用户
+            const userIndex = users.findIndex(u => u.phone === currentUser.phone);
+            if (userIndex !== -1) {
+                users[userIndex] = currentUser;
+            }
+            
+            // 保存到本地存储
+            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+            localStorage.setItem('users', JSON.stringify(users));
+            
+            alert('个人信息已成功保存');
+        }
+
+        // 加载个人中心数据（从本地存储）
+        function loadProfileData() {
+            const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+            if (currentUser) {
+                profilePhone.value = currentUser.phone || '';
+                profilePlate.value = currentUser.plate || '';
+                diagnosisCount.textContent = currentUser.diagnosisCount || 0;
+                solvedCount.textContent = currentUser.solvedCount || 0;
+                savedCount.textContent = currentUser.savedCount || 0;
+            }
+        }
+
+        // 更新诊断次数统计
+        function updateDiagnosisCount() {
+            const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+            if (currentUser) {
+                const newCount = parseInt(diagnosisCount.textContent) + 1;
+                diagnosisCount.textContent = newCount;
+                saveProfileData(); // 同步保存到本地存储
+            }
+        }
+
+        // 更新已解决问题数统计
+        function updateSolvedCount() {
+            const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+            if (currentUser) {
+                const newCount = parseInt(solvedCount.textContent) + 1;
+                solvedCount.textContent = newCount;
+                saveProfileData(); // 同步保存到本地存储
+            }
+        }
+
+        // 初始化应用（启动入口）
+        init();
+    </script>
+</body>
+</html>
